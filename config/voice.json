@@ -1,0 +1,4 @@
+{
+  "stt_plugin": "whisper_local",
+  "tts_plugin": "piper_tts"
+}

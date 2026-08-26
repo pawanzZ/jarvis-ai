@@ -1,9 +1,8 @@
-## Gate — Milestone 2 (Pluggable AI & Audio Pipeline)
+## Gate — Milestone 5 (E2E Integration & Verification — Final Acceptance)
 | Agent | Role | Verdict | Source |
 |-------|------|---------|--------|
-| worker_m2 | teamwork_preview_worker | DONE (127/127 pytest passed) | handoff.md |
-| reviewer_m2 | teamwork_preview_reviewer | APPROVE | handoff.md |
-| challenger_m2 | teamwork_preview_challenger | APPROVE (Empirical loop & stress passed) | handoff.md |
-| auditor_m2 | teamwork_preview_auditor | CLEAN (Mathematical RMS & plugin integrity verified) | handoff.md |
+| reviewer_e2e | teamwork_preview_reviewer | APPROVE (All acceptance criteria met) | handoff.md |
+| challenger_e2e | teamwork_preview_challenger | APPROVE (127 pytest pass, frontend build pass, scripts verified, WS stress pass) | handoff.md |
+| auditor_e2e | teamwork_preview_auditor | CLEAN (Zero integrity violations, zero facades) | handoff.md |
 
 Gate Result: **PASS**

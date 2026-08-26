@@ -13,5 +13,5 @@ Current iteration: 1 / 32
 - [x] 3. Milestone 2: Pluggable AI & Audio Pipeline (R2)
 - [x] 4. Milestone 3: Full-Screen HUD Visualizer & Audio SFX (R3)
 - [x] 5. Milestone 4: Project Tooling, Automation & Documentation (R4)
-- [ ] 6. Milestone 5: E2E Integration & Verification
-- [ ] 7. Final Acceptance & Audit Verification
+- [x] 6. Milestone 5: E2E Integration & Verification
+- [x] 7. Final Acceptance & Audit Verification

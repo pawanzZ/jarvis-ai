@@ -74,7 +74,7 @@ Jarvis AI is a voice-interactive desktop AI assistant with a full-screen Iron Ma
 | M2 | Pluggable AI & Audio Pipeline | Features 6-12: MicStream, SpeakerOutput, VAD, Whisper STT, Piper TTS, Ollama LLM, PTT, Clap, Face Tracker plugins & test suites | M1 | DONE |
 | M3 | Full-Screen HUD Visualizer & Audio SFX | Features 13-20: Electron HUD, ARC Reactor, Waveform, Particles, Status/Transcript bars, SFX Synthesizer, Settings panel, TypeScript build | None | DONE |
 | M4 | Project Tooling, Automation & Documentation | Features 21-24: scripts/setup.sh, scripts/dev.sh, config/default.yaml, config JSONs, README.md, task checkboxes in plan | M1, M2, M3 | DONE |
-| M5 | E2E Integration & Verification | Feature 25: 100% backend unit test pass (12 suites), frontend clean build, E2E protocol verification | M1, M2, M3, M4 | IN_PROGRESS |
+| M5 | E2E Integration & Verification | Feature 25: 100% backend unit test pass (12 suites), frontend clean build, E2E protocol verification | M1, M2, M3, M4 | DONE |
 
 ## Interface Contracts
 
