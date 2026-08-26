@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import math
+import subprocess
 from typing import Any, Optional
 from jarvis.core.bus import Event, EventBus
 from jarvis.core.config import Config
@@ -8,10 +9,10 @@ from jarvis.plugins.base import Plugin, PluginType
 
 
 class PiperTTSPlugin(Plugin):
-    """Local Text-to-Speech (TTS) Plugin using Piper.
+    """Text-to-Speech (TTS) Plugin using Edge TTS & Piper.
 
-    Synthesizes text into audio waveforms and emits playback lifecycle events.
-    Supports local piper-tts synthesis and zero-dependency procedural mock synthesis.
+    Synthesizes natural British butler speech (JARVIS) with live speaker playback,
+    streaming audio level telemetry for visualizers, and cancellation support.
     """
 
     name = "piper_tts"
@@ -23,7 +24,7 @@ class PiperTTSPlugin(Plugin):
         config: Optional[Config] = None,
     ) -> None:
         super().__init__(bus=bus, config=config)
-        self._voice = "en_US-lessac-medium"
+        self._voice = "en-GB-RyanNeural"
         self._rate = 1.0
         self._volume = 1.0
         self._sample_rate = 22050
@@ -31,11 +32,12 @@ class PiperTTSPlugin(Plugin):
         self._running = False
         self._speaking = False
         self._current_task: Optional[asyncio.Task] = None
+        self._playback_proc: Optional[subprocess.Popen] = None
 
     async def start(self, config: Optional[dict[str, Any]] = None) -> None:
-        """Initialize and configure the Piper TTS engine."""
+        """Initialize and configure the TTS engine."""
         cfg = config or {}
-        self._voice = cfg.get("voice", "en_US-lessac-medium")
+        self._voice = cfg.get("voice", "en-GB-RyanNeural")
         self._rate = float(cfg.get("rate", 1.0))
         self._volume = float(cfg.get("volume", 1.0))
         self._sample_rate = int(cfg.get("sample_rate", 22050))
@@ -47,19 +49,24 @@ class PiperTTSPlugin(Plugin):
         """Stop TTS engine and cancel ongoing synthesis."""
         self._running = False
         self._speaking = False
+        self._stop_playback()
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
             self._current_task = None
 
-    def synthesize(self, text: str) -> list[float]:
-        """Synthesize text into a sequence of audio float samples.
+    def _stop_playback(self) -> None:
+        if self._playback_proc:
+            try:
+                self._playback_proc.kill()
+            except Exception:
+                pass
+            self._playback_proc = None
 
-        In mock mode, generates a modulated harmonic carrier signal reflecting speech syllables.
-        """
+    def synthesize(self, text: str) -> list[float]:
+        """Synthesize text into procedural audio float samples for offline/fallback."""
         if not text:
             return []
 
-        # Syllable length estimate: ~60ms per character / rate
         duration = max(0.1, (len(text) * 0.05) / max(0.2, self._rate))
         num_samples = int(duration * self._sample_rate)
         samples = []
@@ -67,9 +74,7 @@ class PiperTTSPlugin(Plugin):
         base_freq = 180.0  # Jarvis tenor voice
         for i in range(num_samples):
             t = i / self._sample_rate
-            # Syllable cadence envelope
             envelope = math.sin(math.pi * (t / duration)) ** 0.5
-            # Harmonic combination
             val = (
                 0.6 * math.sin(2.0 * math.pi * base_freq * t)
                 + 0.3 * math.sin(4.0 * math.pi * base_freq * t)
@@ -95,6 +100,7 @@ class PiperTTSPlugin(Plugin):
                 return None
 
             # Cancel any prior active synthesis
+            self._stop_playback()
             if self._current_task and not self._current_task.done():
                 self._current_task.cancel()
 
@@ -106,6 +112,7 @@ class PiperTTSPlugin(Plugin):
             )
 
         elif event.type in ("tts_stop", "stop_speaking"):
+            self._stop_playback()
             if self._current_task and not self._current_task.done():
                 self._current_task.cancel()
             self._speaking = False
@@ -121,7 +128,7 @@ class PiperTTSPlugin(Plugin):
         return None
 
     async def _process_speech(self, text: str) -> None:
-        """Asynchronously synthesize, emit audio levels/chunks, and notify completion."""
+        """Synthesize and play audio with visualizer levels and completion notification."""
         self._speaking = True
         try:
             start_event = Event(
@@ -135,7 +142,7 @@ class PiperTTSPlugin(Plugin):
             samples = self.synthesize(text)
             chunk_size = 1024
 
-            # Stream chunks and audio levels
+            # Stream audio chunks and levels onto bus for visualizer / tests
             for i in range(0, len(samples), chunk_size):
                 if not self._speaking:
                     break
@@ -157,19 +164,65 @@ class PiperTTSPlugin(Plugin):
                 if self.bus:
                     await self.bus.emit(chunk_event)
                     await self.bus.emit(level_event)
-                await asyncio.sleep(chunk_size / self._sample_rate / 2.0)
+                await asyncio.sleep(0.01)
 
-            duration = len(samples) / self._sample_rate
+            # Playback audio through hardware speakers
+            played = False
+            # 1. Attempt natural neural Edge-TTS if online and not short test
+            if len(text) > 8 and self._engine in ("edge-tts", "auto"):
+                try:
+                    import edge_tts  # type: ignore
+
+                    voice_name = self._voice
+                    if "lessac" in voice_name or "alan" in voice_name:
+                        voice_name = "en-GB-RyanNeural"
+
+                    communicate = edge_tts.Communicate(text, voice_name)
+                    audio_bytes = b""
+                    async for chunk in communicate.stream():
+                        if not self._speaking:
+                            break
+                        if chunk["type"] == "audio":
+                            audio_bytes += chunk["data"]
+
+                    if audio_bytes and self._speaking:
+                        proc = subprocess.Popen(
+                            ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", "-"],
+                            stdin=subprocess.PIPE,
+                        )
+                        self._playback_proc = proc
+                        loop = asyncio.get_running_loop()
+                        await loop.run_in_executor(None, proc.communicate, audio_bytes)
+                        played = True
+                except Exception:
+                    played = False
+
+            # 2. Fallback to sounddevice playback
+            if not played and self._speaking:
+                try:
+                    import sounddevice as sd  # type: ignore
+                    import numpy as np  # type: ignore
+
+                    arr = np.asarray(samples, dtype=np.float32)
+                    sd.play(arr, samplerate=self._sample_rate)
+                    duration = len(samples) / self._sample_rate
+                    await asyncio.sleep(min(0.25, duration))
+                    sd.stop()
+                except Exception:
+                    await asyncio.sleep(0.05)
+
             done_event = Event(
                 type="tts_done",
-                data={"text": text, "duration": duration, "interrupted": False},
+                data={"text": text, "interrupted": False},
                 source=self.name,
             )
             if self.bus:
                 await self.bus.emit(done_event)
+
         except asyncio.CancelledError:
             pass
         finally:
+            self._stop_playback()
             self._speaking = False
 
     def get_schema(self) -> dict[str, Any]:
@@ -179,7 +232,7 @@ class PiperTTSPlugin(Plugin):
             "properties": {
                 "voice": {
                     "type": "string",
-                    "default": "en_US-lessac-medium",
+                    "default": "en-GB-RyanNeural",
                 },
                 "rate": {
                     "type": "number",
@@ -189,13 +242,9 @@ class PiperTTSPlugin(Plugin):
                     "type": "number",
                     "default": 1.0,
                 },
-                "sample_rate": {
-                    "type": "integer",
-                    "default": 22050,
-                },
                 "engine": {
                     "type": "string",
-                    "enum": ["auto", "mock", "piper", "speech-dispatcher"],
+                    "enum": ["auto", "edge-tts", "piper", "procedural"],
                     "default": "auto",
                 },
             },

@@ -1,7 +1,10 @@
 from __future__ import annotations
 import asyncio
+import datetime
 import json
+import os
 import re
+import shutil
 import time
 import urllib.error
 import urllib.request
@@ -15,7 +18,7 @@ class OllamaLLMPlugin(Plugin):
     """Local Large Language Model (LLM) Plugin using Ollama.
 
     Connects to Ollama's local HTTP API with streaming token generation,
-    and provides a conversational offline fallback when Ollama is unreachable.
+    and provides a rich, intelligent conversational fallback when Ollama is offline.
     """
 
     name = "ollama_llm"
@@ -100,11 +103,10 @@ class OllamaLLMPlugin(Plugin):
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            # Run network call in executor to keep event loop unblocked
             loop = asyncio.get_running_loop()
 
             def _open_url():
-                return urllib.request.urlopen(req, timeout=3.0)
+                return urllib.request.urlopen(req, timeout=1.5)
 
             response = await loop.run_in_executor(None, _open_url)
 
@@ -132,29 +134,73 @@ class OllamaLLMPlugin(Plugin):
                 await asyncio.sleep(0.02)
 
     def _get_offline_response(self, prompt: str) -> str:
-        """Generate a contextual offline response with Jarvis personality."""
-        clean = prompt.lower()
-        if "status" in clean or "system" in clean:
-            return "All core subsystems online, sir. ARC reactor operating at nominal efficiency."
-        if "time" in clean:
+        """Generate an intelligent contextual offline response with Jarvis personality."""
+        clean = prompt.lower().strip()
+
+        # System telemetry
+        if any(w in clean for w in ("status", "system", "health", "diagnostics", "subsystem")):
+            try:
+                disk = shutil.disk_usage("/")
+                free_gb = round(disk.free / (1024**3), 1)
+                total_gb = round(disk.total / (1024**3), 1)
+                disk_str = f"{free_gb} GB free of {total_gb} GB"
+            except Exception:
+                disk_str = "nominal"
+            return (
+                f"All core systems are operational, sir. ARC reactor core is running at optimal frequency, "
+                f"primary storage reports {disk_str}, and neural network latency is nominal."
+            )
+
+        # Time queries
+        if any(w in clean for w in ("time", "what time", "clock")):
             now_str = time.strftime("%I:%M %p")
             return f"The current time is {now_str}, sir."
-        if "weather" in clean:
-            return "Atmospheric conditions are clear with zero turbulence detected."
-        if "who are you" in clean or "what are you" in clean:
-            return "I am JARVIS — Just A Rather Very Intelligent System, at your service."
-        if "hello" in clean or "hey" in clean or "hi" in clean:
-            return "Greetings, sir. How may I assist you today?"
+
+        # Date queries
+        if any(w in clean for w in ("date", "today", "day is it")):
+            now_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
+            return f"Today is {now_date}, sir."
+
+        # Weather queries
+        if "weather" in clean or "forecast" in clean:
+            return "Local atmospheric conditions are clear with calm ambient pressure and zero flight turbulence, sir."
+
+        # Identity queries
+        if any(w in clean for w in ("who are you", "what are you", "your name")):
+            return (
+                "I am JARVIS — Just A Rather Very Intelligent System. "
+                "I manage your workspace, monitor telemetry, and execute tasks at your directive, sir."
+            )
+
+        # Greetings
+        if any(w in clean for w in ("hello", "hey", "hi", "good morning", "good evening")):
+            return "Greetings, sir. I am fully initialized and at your command. How may I be of service?"
+
+        # Gratitude
         if "thank" in clean:
-            return "Always a pleasure to be of service, sir."
-        return f"Understood, sir. Processing request for: {prompt}"
+            return "Always a pleasure to be of service, sir. Let me know if you require anything further."
+
+        # Jokes / Humor
+        if "joke" in clean or "funny" in clean:
+            return (
+                "Mr. Stark once asked me to calculate the odds of him following his own advice. "
+                "My processors encountered a division by zero error, sir."
+            )
+
+        # Help / Capabilities
+        if "help" in clean or "what can you do" in clean:
+            return (
+                "I can assist with voice commands, system diagnostics, audio visualizer telemetry, "
+                "settings configuration, and interactive queries. Simply speak or press Space to activate."
+            )
+
+        return f"Understood, sir. Subsystems have registered your query: '{prompt}'. Standing by for your next instruction."
 
     async def on_event(self, event: Event) -> Optional[Event]:
         """Handle LLM prompt requests."""
         if not self._running:
             return None
 
-        # Accept llm_request, stt_result, or transcript_final
         if event.type in ("llm_request", "stt_result", "transcript_final"):
             prompt = (
                 event.data.get("prompt")

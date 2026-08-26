@@ -21,7 +21,7 @@ class WhisperLocalPlugin(Plugin):
         config: Optional[Config] = None,
     ) -> None:
         super().__init__(bus=bus, config=config)
-        self._model_size = "base"
+        self._model_size = "tiny.en"
         self._language = "en"
         self._engine = "auto"
         self._running = False
@@ -32,25 +32,26 @@ class WhisperLocalPlugin(Plugin):
     async def start(self, config: Optional[dict[str, Any]] = None) -> None:
         """Initialize and start the Whisper STT engine."""
         cfg = config or {}
-        self._model_size = cfg.get("model", "base")
+        self._model_size = cfg.get("model", "tiny.en")
         self._language = cfg.get("language", "en")
         self._engine = cfg.get("engine", "auto")
         self._audio_buffer.clear()
         self._running = True
 
-        # Attempt engine initialization
+        # Attempt faster-whisper engine initialization
         if self._engine in ("faster-whisper", "auto"):
             try:
                 from faster_whisper import WhisperModel  # type: ignore
 
-                self._model_instance = WhisperModel(self._model_size, device="cpu", compute_type="int8")
+                # Use tiny.en for low-latency CPU transcription
+                model_name = "tiny.en" if self._model_size in ("tiny", "tiny.en") else self._model_size
+                self._model_instance = WhisperModel(model_name, device="cpu", compute_type="int8")
                 self._engine = "faster-whisper"
-            except Exception:
+                print(f"[WhisperLocal] Loaded faster-whisper model '{model_name}' successfully")
+            except Exception as e:
+                print(f"[WhisperLocal] faster-whisper load fallback ({e})")
                 self._model_instance = None
-                if self._engine == "faster-whisper":
-                    self._engine = "mock"
-                else:
-                    self._engine = "mock"
+                self._engine = "mock"
         else:
             self._model_instance = None
             self._engine = "mock"
@@ -68,20 +69,40 @@ class WhisperLocalPlugin(Plugin):
     def transcribe(self, audio_data: Any) -> str:
         """Synchronously transcribe audio data using loaded engine or mock."""
         if self._mock_transcript is not None:
-            result = self._mock_transcript
-            return result
+            return self._mock_transcript
 
         if self._model_instance is not None and self._engine == "faster-whisper":
             try:
-                segments, _ = self._model_instance.transcribe(
-                    audio_data,
-                    language=self._language,
-                )
-                return " ".join([seg.text.strip() for seg in segments])
-            except Exception:
-                pass
+                import numpy as np  # type: ignore
 
-        # Realistic mock STT rule-based fallback
+                if isinstance(audio_data, (list, tuple)):
+                    audio_arr = np.asarray(audio_data, dtype=np.float32)
+                elif hasattr(audio_data, "astype"):
+                    audio_arr = audio_data.astype(np.float32)
+                else:
+                    audio_arr = np.zeros(1600, dtype=np.float32)
+
+                if audio_arr.size < 3200:  # less than ~0.2s of audio
+                    return ""
+
+                # Normalize if integer scale
+                max_v = float(np.max(np.abs(audio_arr)))
+                if max_v > 1.0:
+                    audio_arr = audio_arr / 32768.0
+
+                lang = None if self._language == "auto" else self._language
+                segments, _ = self._model_instance.transcribe(
+                    audio_arr,
+                    language=lang,
+                    beam_size=1,
+                    vad_filter=True,
+                )
+                text = " ".join([seg.text.strip() for seg in segments]).strip()
+                return text
+            except Exception as e:
+                print(f"[WhisperLocal] Transcription error: {e}")
+
+        # Fallback if mock engine is active
         if isinstance(audio_data, (list, tuple)) and len(audio_data) > 0:
             return "Jarvis, report system status."
         return "Hello Jarvis"
@@ -101,7 +122,7 @@ class WhisperLocalPlugin(Plugin):
 
                 # If significant audio accumulated, emit partial transcript
                 if len(self._audio_buffer) >= 8000:
-                    partial_text = self._mock_transcript or "Jarvis..."
+                    partial_text = self._mock_transcript or "Listening..."
                     partial_event = Event(
                         type="transcript_partial",
                         data={"text": partial_text, "is_final": False},
@@ -142,8 +163,8 @@ class WhisperLocalPlugin(Plugin):
             "properties": {
                 "model": {
                     "type": "string",
-                    "enum": ["tiny", "base", "small", "medium", "large"],
-                    "default": "base",
+                    "enum": ["tiny.en", "tiny", "base.en", "base", "small", "medium", "large"],
+                    "default": "tiny.en",
                 },
                 "language": {
                     "type": "string",

@@ -24,6 +24,26 @@ export class SettingsPanel {
     this.ws = ws;
     this.options = options;
 
+    // Restore cached settings from localStorage if available
+    const saved = typeof localStorage !== "undefined" ? localStorage.getItem("jarvis_settings") : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        this.settings = {
+          ...this.settings,
+          ...parsed,
+          voice: { ...this.settings.voice, ...(parsed.voice || {}) },
+          brain: { ...this.settings.brain, ...(parsed.brain || {}) },
+          activation: { ...this.settings.activation, ...(parsed.activation || {}) },
+          appearance: { ...this.settings.appearance, ...(parsed.appearance || {}) },
+          vision: { ...this.settings.vision, ...(parsed.vision || {}) },
+          sfx: { ...this.settings.sfx, ...(parsed.sfx || {}) },
+        };
+      } catch (e) {
+        console.error("Failed to parse saved settings from localStorage:", e);
+      }
+    }
+
     this.drawerEl = document.getElementById("settings-drawer") as HTMLElement;
     this.backdropEl = document.getElementById("settings-backdrop") as HTMLElement;
 
@@ -58,6 +78,7 @@ export class SettingsPanel {
   }
 
   public updateSettings(partialSettings: Partial<SettingsConfig>): void {
+    if (!partialSettings || Object.keys(partialSettings).length === 0) return;
     this.settings = {
       ...this.settings,
       ...partialSettings,
@@ -68,6 +89,11 @@ export class SettingsPanel {
       vision: { ...this.settings.vision, ...(partialSettings.vision || {}) },
       sfx: { ...this.settings.sfx, ...(partialSettings.sfx || {}) },
     };
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem("jarvis_settings", JSON.stringify(this.settings));
+      } catch (e) {}
+    }
     this.populateFormValues();
     if (this.options.onSettingsChange) {
       this.options.onSettingsChange(this.settings);
@@ -361,11 +387,20 @@ export class SettingsPanel {
     setupSlider("cfg-sfx-vol", "val-sfx-vol", (v) => `${Math.round(v * 100)}%`);
 
     // Apply & Save button
-    const saveBtn = this.drawerEl.querySelector("#save-config-btn");
+    const saveBtn = this.drawerEl.querySelector("#save-config-btn") as HTMLButtonElement;
     saveBtn?.addEventListener("click", () => {
       this.collectFormData();
       this.syncWithBackend();
-      this.close();
+      const origText = saveBtn.textContent;
+      saveBtn.textContent = "✓ SAVED & SYNCED!";
+      saveBtn.style.background = "#00d4ff";
+      saveBtn.style.color = "#0a0a0f";
+      setTimeout(() => {
+        saveBtn.textContent = origText;
+        saveBtn.style.background = "";
+        saveBtn.style.color = "";
+        this.close();
+      }, 600);
     });
 
     // Dev Controls
@@ -460,35 +495,36 @@ export class SettingsPanel {
     this.settings.sfx.chimesEnabled = getChecked("cfg-sfx-chimes");
     this.settings.sfx.humEnabled = getChecked("cfg-sfx-hum");
 
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.setItem("jarvis_settings", JSON.stringify(this.settings));
+      } catch (e) {}
+    }
+
     if (this.options.onSettingsChange) {
       this.options.onSettingsChange(this.settings);
     }
   }
 
   private syncWithBackend(): void {
+    // 1. Send complete settings package
     this.ws.send({
-      type: "config_update",
-      namespace: "voice",
-      key: "stt_plugin",
-      value: this.settings.voice.sttPlugin,
+      type: "settings_save",
+      settings: this.settings,
     });
-    this.ws.send({
-      type: "config_update",
-      namespace: "voice",
-      key: "tts_plugin",
-      value: this.settings.voice.ttsPlugin,
-    });
-    this.ws.send({
-      type: "config_update",
-      namespace: "brain",
-      key: "model",
-      value: this.settings.brain.model,
-    });
-    this.ws.send({
-      type: "config_update",
-      namespace: "brain",
-      key: "temperature",
-      value: this.settings.brain.temperature,
-    });
+
+    // 2. Individual config updates for backward compatibility and fine-grained reactivity
+    for (const [ns, values] of Object.entries(this.settings)) {
+      if (typeof values === "object" && values !== null) {
+        for (const [k, v] of Object.entries(values)) {
+          this.ws.send({
+            type: "config_update",
+            namespace: ns,
+            key: k,
+            value: v,
+          });
+        }
+      }
+    }
   }
 }
