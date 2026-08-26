@@ -7,12 +7,11 @@
     "dev": "tsc && electron dist/main.js",
     "start": "electron dist/main.js"
   },
-  "dependencies": {
-    "ws": "^8.16.0"
-  },
   "devDependencies": {
-    "electron": "^30.0.0",
-    "typescript": "^5.4.0",
-    "@types/ws": "^8.5.0"
+    "electron": "^44.0.0",
+    "typescript": "^5.4.0"
+  },
+  "allowScripts": {
+    "electron@30.5.1": true
   }
 }
