@@ -34,7 +34,10 @@ async def test_concurrent_clients_broadcast():
 
     async with serve(server._handle, "localhost", port):
         client_tasks = [asyncio.create_task(client_worker(i)) for i in range(num_clients)]
-        await asyncio.sleep(0.1)
+        for _ in range(50):
+            if len(server._clients) == num_clients:
+                break
+            await asyncio.sleep(0.01)
 
         # Broadcast 5 messages
         for i in range(5):

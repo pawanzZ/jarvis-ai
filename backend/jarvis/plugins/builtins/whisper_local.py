@@ -95,7 +95,7 @@ class WhisperLocalPlugin(Plugin):
                     audio_arr,
                     language=lang,
                     beam_size=1,
-                    vad_filter=True,
+                    vad_filter=False,
                 )
                 text = " ".join([seg.text.strip() for seg in segments]).strip()
                 return text

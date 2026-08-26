@@ -61,7 +61,7 @@ export class StatusBar {
       <div class="status-center">
         <div class="status-item">
           <span class="label">AI BRAIN:</span>
-          <span class="val" id="model-indicator">llama3</span>
+          <span class="val" id="model-indicator">llama3.2:3b</span>
         </div>
         <div class="status-item">
           <span class="label">MODE:</span>
