@@ -1,0 +1,5 @@
+{
+  "threshold": 0.7,
+  "window_ms": 500,
+  "min_interval_ms": 50
+}

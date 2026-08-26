@@ -46,3 +46,31 @@ async def test_off_removes_handler():
     for h in bus._handlers.get(event.type, []):
         await h(event)
     assert len(received) == 1, "handler should not fire after off()"
+
+
+@pytest.mark.asyncio
+async def test_handler_exception_isolation_in_process():
+    bus = EventBus()
+    received = []
+
+    async def faulty_handler(event: Event) -> None:
+        raise ValueError("Handler error")
+
+    async def normal_handler(event: Event) -> None:
+        received.append(event.data.get("v"))
+
+    bus.on("calc", faulty_handler)
+    bus.on("calc", normal_handler)
+
+    task = asyncio.create_task(bus.process())
+    await bus.emit(Event(type="calc", data={"v": 1}))
+    await bus.emit(Event(type="calc", data={"v": 2}))
+    await asyncio.sleep(0.05)
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+    assert received == [1, 2]

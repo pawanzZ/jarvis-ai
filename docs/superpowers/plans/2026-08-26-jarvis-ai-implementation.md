@@ -41,7 +41,7 @@
 **Interfaces:**
 - Produces: `EventBus`, `StateMachine`, `Config` classes
 
-- [ ] **Step 1: Create pyproject.toml**
+- [x] **Step 1: Create pyproject.toml**
 
 ```toml
 [build-system]
@@ -65,7 +65,7 @@ dev = [
 ]
 ```
 
-- [ ] **Step 2: Create Event Bus**
+- [x] **Step 2: Create Event Bus**
 
 ```python
 # backend/jarvis/core/bus.py
@@ -110,7 +110,7 @@ class EventBus:
                 await handler(event)
 ```
 
-- [ ] **Step 3: Create State Machine**
+- [x] **Step 3: Create State Machine**
 
 ```python
 # backend/jarvis/core/state.py
@@ -157,7 +157,7 @@ class StateMachine:
         return True
 ```
 
-- [ ] **Step 4: Create Config Loader**
+- [x] **Step 4: Create Config Loader**
 
 ```python
 # backend/jarvis/core/config.py
@@ -200,7 +200,7 @@ class Config:
         path.write_text(json.dumps(self._cache[namespace], indent=2))
 ```
 
-- [ ] **Step 5: Create __main__.py entry point**
+- [x] **Step 5: Create __main__.py entry point**
 
 ```python
 # backend/jarvis/__main__.py
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-- [ ] **Step 6: Write tests for EventBus**
+- [x] **Step 6: Write tests for EventBus**
 
 ```python
 # backend/tests/test_bus.py
@@ -272,7 +272,7 @@ async def test_off_removes_handler():
     assert bus._queue.empty() or len(received) == 0
 ```
 
-- [ ] **Step 7: Write tests for StateMachine**
+- [x] **Step 7: Write tests for StateMachine**
 
 ```python
 # backend/tests/test_state.py
@@ -316,12 +316,12 @@ async def test_on_change_callback():
     assert changes[0] == (JarvisState.IDLE, JarvisState.LISTENING)
 ```
 
-- [ ] **Step 8: Run tests**
+- [x] **Step 8: Run tests**
 
 Run: `cd backend && python -m pytest tests/ -v`
 Expected: All 5 tests pass
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/
@@ -344,7 +344,7 @@ git commit -m "feat: Python backend skeleton with EventBus, StateMachine, Config
 **Interfaces:**
 - Produces: `JarvisApp` class, `WSClient` class
 
-- [ ] **Step 1: Create package.json**
+- [x] **Step 1: Create package.json**
 
 ```json
 {
@@ -367,7 +367,7 @@ git commit -m "feat: Python backend skeleton with EventBus, StateMachine, Config
 }
 ```
 
-- [ ] **Step 2: Create tsconfig.json**
+- [x] **Step 2: Create tsconfig.json**
 
 ```json
 {
@@ -388,7 +388,7 @@ git commit -m "feat: Python backend skeleton with EventBus, StateMachine, Config
 }
 ```
 
-- [ ] **Step 3: Create Electron main process**
+- [x] **Step 3: Create Electron main process**
 
 ```typescript
 // frontend/src/main.ts
@@ -422,7 +422,7 @@ app.on("window-all-closed", () => {
 });
 ```
 
-- [ ] **Step 4: Create preload script**
+- [x] **Step 4: Create preload script**
 
 ```typescript
 // frontend/src/preload.ts
@@ -433,7 +433,7 @@ contextBridge.exposeInMainWorld("jarvis", {
 });
 ```
 
-- [ ] **Step 5: Create index.html**
+- [x] **Step 5: Create index.html**
 
 ```html
 <!DOCTYPE html>
@@ -471,7 +471,7 @@ contextBridge.exposeInMainWorld("jarvis", {
 </html>
 ```
 
-- [ ] **Step 6: Create WebSocket client**
+- [x] **Step 6: Create WebSocket client**
 
 ```typescript
 // frontend/src/renderer/core/ws-client.ts
@@ -528,7 +528,7 @@ export class WSClient {
 }
 ```
 
-- [ ] **Step 7: Create app entry point**
+- [x] **Step 7: Create app entry point**
 
 ```typescript
 // frontend/src/renderer/core/app.ts
@@ -562,12 +562,12 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 ```
 
-- [ ] **Step 8: Install dependencies and build**
+- [x] **Step 8: Install dependencies and build**
 
 Run: `cd frontend && npm install && npm run build`
 Expected: TypeScript compiles without errors, `dist/` folder created
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add frontend/
@@ -586,7 +586,7 @@ git commit -m "feat: Electron frontend skeleton with WebSocket client"
 - Consumes: `EventBus`, `StateMachine`, `Config` from Task 1
 - Produces: `WSServer` class, message protocol
 
-- [ ] **Step 1: Create WebSocket server**
+- [x] **Step 1: Create WebSocket server**
 
 ```python
 # backend/jarvis/ws_server.py
@@ -660,7 +660,7 @@ class WSServer:
                 self._clients.discard(client)
 ```
 
-- [ ] **Step 2: Write tests**
+- [x] **Step 2: Write tests**
 
 ```python
 # backend/tests/test_ws_server.py
@@ -696,12 +696,12 @@ async def test_server_broadcast():
         server_task.cancel()
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_ws_server.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/ws_server.py backend/tests/test_ws_server.py
@@ -719,7 +719,7 @@ git commit -m "feat: WebSocket server for Electron communication"
 **Interfaces:**
 - Consumes: `WSServer` from Task 3, `WSClient` from Task 2
 
-- [ ] **Step 1: Update backend entry point to start WebSocket**
+- [x] **Step 1: Update backend entry point to start WebSocket**
 
 ```python
 # backend/jarvis/__main__.py
@@ -750,7 +750,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-- [ ] **Step 2: Update frontend to display connection status**
+- [x] **Step 2: Update frontend to display connection status**
 
 ```typescript
 // frontend/src/renderer/core/app.ts
@@ -786,14 +786,14 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 ```
 
-- [ ] **Step 3: Test end-to-end**
+- [x] **Step 3: Test end-to-end**
 
 Run: `cd backend && python -m jarvis` (starts backend)
 Run: `cd frontend && npm run dev` (starts Electron)
 
 Expected: Electron opens, shows "State: idle" in status bar. Backend prints "Jarvis backend starting..."
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/__main__.py frontend/src/renderer/core/app.ts
@@ -813,7 +813,7 @@ git commit -m "feat: Connect Python backend to Electron frontend via WebSocket"
 **Interfaces:**
 - Consumes: `WSClient` events from Task 4
 
-- [ ] **Step 1: Create HUD layout CSS**
+- [x] **Step 1: Create HUD layout CSS**
 
 ```css
 /* frontend/src/renderer/hud/layout.css */
@@ -875,7 +875,7 @@ git commit -m "feat: Connect Python backend to Electron frontend via WebSocket"
 }
 ```
 
-- [ ] **Step 2: Update index.html with HUD structure**
+- [x] **Step 2: Update index.html with HUD structure**
 
 ```html
 <!-- Update frontend/src/renderer/index.html -->
@@ -910,7 +910,7 @@ git commit -m "feat: Connect Python backend to Electron frontend via WebSocket"
 </html>
 ```
 
-- [ ] **Step 3: Update app.ts to manage HUD elements**
+- [x] **Step 3: Update app.ts to manage HUD elements**
 
 ```typescript
 // frontend/src/renderer/core/app.ts (updated)
@@ -975,13 +975,13 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 ```
 
-- [ ] **Step 4: Build and verify layout**
+- [x] **Step 4: Build and verify layout**
 
 Run: `cd frontend && npm run build && npm run dev`
 
 Expected: Full-screen dark HUD with three-panel layout, status bar showing "State: Idle", transcript bar at bottom.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/renderer/hud/ frontend/src/renderer/index.html frontend/src/renderer/core/app.ts
@@ -1004,7 +1004,7 @@ git commit -m "feat: Basic HUD layout with status bar, panels, transcript"
 - Consumes: `EventBus`, `Config` from Task 1
 - Produces: `PluginType`, `Plugin` ABC, `PluginManager`
 
-- [ ] **Step 1: Create plugin base classes**
+- [x] **Step 1: Create plugin base classes**
 
 ```python
 # backend/jarvis/plugins/base.py
@@ -1043,7 +1043,7 @@ class Plugin(ABC):
         ...
 ```
 
-- [ ] **Step 2: Create Plugin Manager**
+- [x] **Step 2: Create Plugin Manager**
 
 ```python
 # backend/jarvis/plugins/manager.py
@@ -1112,7 +1112,7 @@ class PluginManager:
         return dict(self._plugins)
 ```
 
-- [ ] **Step 3: Create a stub plugin for testing**
+- [x] **Step 3: Create a stub plugin for testing**
 
 ```python
 # backend/jarvis/plugins/builtins/stub.py
@@ -1141,7 +1141,7 @@ class StubPlugin(Plugin):
 plugin_class = StubPlugin
 ```
 
-- [ ] **Step 4: Write tests**
+- [x] **Step 4: Write tests**
 
 ```python
 # backend/tests/test_plugins.py
@@ -1210,12 +1210,12 @@ plugin_class = StubPlugin
     assert manager.get_active(PluginType.STT) is None
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_plugins.py -v`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/jarvis/plugins/ backend/tests/test_plugins.py
@@ -1233,7 +1233,7 @@ git commit -m "feat: Plugin interface, manager, and discovery system"
 **Interfaces:**
 - Consumes: `Config` from Task 1
 
-- [ ] **Step 1: Add namespace listing and validation**
+- [x] **Step 1: Add namespace listing and validation**
 
 ```python
 # backend/jarvis/core/config.py (updated)
@@ -1286,7 +1286,7 @@ class Config:
         path.write_text(json.dumps(self._cache[namespace], indent=2))
 ```
 
-- [ ] **Step 2: Write additional tests**
+- [x] **Step 2: Write additional tests**
 
 ```python
 # backend/tests/test_config.py (additions)
@@ -1317,12 +1317,12 @@ def test_get_all(tmp_path):
     assert data == {"a": 1, "b": 2}
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_config.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/core/config.py backend/tests/test_config.py
@@ -1345,7 +1345,7 @@ git commit -m "feat: Config namespace listing and get_all method"
 **Interfaces:**
 - Produces: `MicStream`, `SpeakerOutput`, `VAD` classes
 
-- [ ] **Step 1: Create mic stream wrapper**
+- [x] **Step 1: Create mic stream wrapper**
 
 ```python
 # backend/jarvis/audio/mic_stream.py
@@ -1375,7 +1375,7 @@ class MicStream:
             yield chunk
 ```
 
-- [ ] **Step 2: Create speaker output**
+- [x] **Step 2: Create speaker output**
 
 ```python
 # backend/jarvis/audio/speaker_output.py
@@ -1397,7 +1397,7 @@ class SpeakerOutput:
         self._playing = False
 ```
 
-- [ ] **Step 3: Create VAD wrapper**
+- [x] **Step 3: Create VAD wrapper**
 
 ```python
 # backend/jarvis/audio/vad.py
@@ -1414,7 +1414,7 @@ class VAD:
         return np.abs(audio).mean() > self.threshold
 ```
 
-- [ ] **Step 4: Write tests**
+- [x] **Step 4: Write tests**
 
 ```python
 # backend/tests/test_audio.py
@@ -1447,12 +1447,12 @@ async def test_mic_start_stop():
     assert mic._running is False
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_audio.py -v`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/jarvis/audio/ backend/tests/test_audio.py
@@ -1471,7 +1471,7 @@ git commit -m "feat: Audio pipeline foundation (mic, speaker, VAD)"
 - Consumes: `Plugin` interface from Task 6, `MicStream` from Task 8
 - Produces: STT plugin that emits `transcript_partial` and `transcript_final` events
 
-- [ ] **Step 1: Create Whisper plugin**
+- [x] **Step 1: Create Whisper plugin**
 
 ```python
 # backend/jarvis/plugins/builtins/whisper_local.py
@@ -1532,7 +1532,7 @@ class WhisperLocalPlugin(Plugin):
 plugin_class = WhisperLocalPlugin
 ```
 
-- [ ] **Step 2: Write tests**
+- [x] **Step 2: Write tests**
 
 ```python
 # backend/tests/test_whisper_plugin.py
@@ -1562,12 +1562,12 @@ def test_get_schema():
     assert "model" in schema["properties"]
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_whisper_plugin.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/plugins/builtins/whisper_local.py backend/tests/test_whisper_plugin.py
@@ -1586,7 +1586,7 @@ git commit -m "feat: Whisper STT plugin skeleton"
 - Consumes: `Plugin` interface from Task 6, `SpeakerOutput` from Task 8
 - Produces: TTS plugin that emits `audio_chunk` events
 
-- [ ] **Step 1: Create Piper TTS plugin**
+- [x] **Step 1: Create Piper TTS plugin**
 
 ```python
 # backend/jarvis/plugins/builtins/piper_tts.py
@@ -1638,7 +1638,7 @@ class PiperTTSPlugin(Plugin):
 plugin_class = PiperTTSPlugin
 ```
 
-- [ ] **Step 2: Write tests**
+- [x] **Step 2: Write tests**
 
 ```python
 # backend/tests/test_piper_plugin.py
@@ -1670,12 +1670,12 @@ def test_get_schema():
     assert "voice" in schema["properties"]
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_piper_plugin.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/plugins/builtins/piper_tts.py backend/tests/test_piper_plugin.py
@@ -1694,7 +1694,7 @@ git commit -m "feat: Piper TTS plugin skeleton"
 - Consumes: `Plugin` interface from Task 6
 - Produces: LLM plugin that emits `llm_token` and `response_complete` events
 
-- [ ] **Step 1: Create Ollama LLM plugin**
+- [x] **Step 1: Create Ollama LLM plugin**
 
 ```python
 # backend/jarvis/plugins/builtins/ollama_llm.py
@@ -1755,7 +1755,7 @@ class OllamaLLMPlugin(Plugin):
 plugin_class = OllamaLLMPlugin
 ```
 
-- [ ] **Step 2: Write tests**
+- [x] **Step 2: Write tests**
 
 ```python
 # backend/tests/test_ollama_plugin.py
@@ -1790,12 +1790,12 @@ def test_get_schema():
     assert "base_url" in schema["properties"]
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_ollama_plugin.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/plugins/builtins/ollama_llm.py backend/tests/test_ollama_plugin.py
@@ -1816,7 +1816,7 @@ git commit -m "feat: Ollama LLM plugin skeleton"
 - Consumes: `Plugin` interface from Task 6
 - Produces: Activation plugin that emits `activate`/`deactivate` events
 
-- [ ] **Step 1: Create Push-to-Talk plugin**
+- [x] **Step 1: Create Push-to-Talk plugin**
 
 ```python
 # backend/jarvis/plugins/builtins/push_to_talk.py
@@ -1865,7 +1865,7 @@ class PushToTalkPlugin(Plugin):
 plugin_class = PushToTalkPlugin
 ```
 
-- [ ] **Step 2: Write tests**
+- [x] **Step 2: Write tests**
 
 ```python
 # backend/tests/test_push_to_talk.py
@@ -1903,12 +1903,12 @@ async def test_wrong_key_ignored():
     assert result is None
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_push_to_talk.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/plugins/builtins/push_to_talk.py backend/tests/test_push_to_talk.py
@@ -1927,7 +1927,7 @@ git commit -m "feat: Push-to-Talk activation plugin"
 - Consumes: `Plugin` interface from Task 6
 - Produces: Activation plugin that detects double clap pattern
 
-- [ ] **Step 1: Create Clap Detector plugin**
+- [x] **Step 1: Create Clap Detector plugin**
 
 ```python
 # backend/jarvis/plugins/builtins/clap_detector.py
@@ -1985,7 +1985,7 @@ class ClapDetectorPlugin(Plugin):
 plugin_class = ClapDetectorPlugin
 ```
 
-- [ ] **Step 2: Write tests**
+- [x] **Step 2: Write tests**
 
 ```python
 # backend/tests/test_clap_detector.py
@@ -2029,12 +2029,12 @@ async def test_low_energy_ignored():
     assert result is None
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_clap_detector.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/plugins/builtins/clap_detector.py backend/tests/test_clap_detector.py
@@ -2055,7 +2055,7 @@ git commit -m "feat: Double clap detector activation plugin"
 **Interfaces:**
 - Consumes: `state_change` events from Task 4
 
-- [ ] **Step 1: Create ARC Reactor CSS**
+- [x] **Step 1: Create ARC Reactor CSS**
 
 ```css
 /* frontend/src/renderer/hud/arc-reactor.css */
@@ -2144,7 +2144,7 @@ git commit -m "feat: Double clap detector activation plugin"
 }
 ```
 
-- [ ] **Step 2: Create ARC Reactor TypeScript**
+- [x] **Step 2: Create ARC Reactor TypeScript**
 
 ```typescript
 // frontend/src/renderer/hud/arc-reactor.ts
@@ -2174,20 +2174,20 @@ export class ArcReactor {
 }
 ```
 
-- [ ] **Step 3: Update index.html to include core**
+- [x] **Step 3: Update index.html to include core**
 
 ```html
 <!-- Add inside #center-area in index.html -->
 <div id="core-container"></div>
 ```
 
-- [ ] **Step 4: Build and verify animation**
+- [x] **Step 4: Build and verify animation**
 
 Run: `cd frontend && npm run build && npm run dev`
 
 Expected: Three concentric rings rotating, pulsing core in center. State changes update colors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/renderer/hud/arc-reactor.ts frontend/src/renderer/hud/arc-reactor.css
@@ -2204,7 +2204,7 @@ git commit -m "feat: ARC Reactor core animation with state-based colors"
 **Interfaces:**
 - Consumes: `audio_level` events from backend
 
-- [ ] **Step 1: Create Waveform visualizer**
+- [x] **Step 1: Create Waveform visualizer**
 
 ```typescript
 // frontend/src/renderer/hud/waveform.ts
@@ -2255,12 +2255,12 @@ export class Waveform {
 }
 ```
 
-- [ ] **Step 2: Build and verify**
+- [x] **Step 2: Build and verify**
 
 Run: `cd frontend && npm run build`
 Expected: TypeScript compiles without errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/renderer/hud/waveform.ts
@@ -2277,7 +2277,7 @@ git commit -m "feat: Audio waveform visualizer"
 **Interfaces:**
 - Consumes: state changes for particle behavior
 
-- [ ] **Step 1: Create Particle system**
+- [x] **Step 1: Create Particle system**
 
 ```typescript
 // frontend/src/renderer/hud/particles.ts
@@ -2357,12 +2357,12 @@ export class ParticleSystem {
 }
 ```
 
-- [ ] **Step 2: Build and verify**
+- [x] **Step 2: Build and verify**
 
 Run: `cd frontend && npm run build`
 Expected: TypeScript compiles without errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/renderer/hud/particles.ts
@@ -2383,7 +2383,7 @@ git commit -m "feat: Particle system with state-reactive density"
 - Consumes: `Plugin` interface from Task 6
 - Produces: `face_data` events with gaze and pose
 
-- [ ] **Step 1: Create Face Tracker plugin**
+- [x] **Step 1: Create Face Tracker plugin**
 
 ```python
 # backend/jarvis/plugins/builtins/face_tracker.py
@@ -2437,7 +2437,7 @@ class FaceTrackerPlugin(Plugin):
 plugin_class = FaceTrackerPlugin
 ```
 
-- [ ] **Step 2: Write tests**
+- [x] **Step 2: Write tests**
 
 ```python
 # backend/tests/test_face_tracker.py
@@ -2468,12 +2468,12 @@ async def test_face_data_event():
     assert "pose" in result.data
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && python -m pytest tests/test_face_tracker.py -v`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/jarvis/plugins/builtins/face_tracker.py backend/tests/test_face_tracker.py
@@ -2492,7 +2492,7 @@ git commit -m "feat: MediaPipe face tracker plugin skeleton"
 **Interfaces:**
 - Consumes: state changes for sound triggers
 
-- [ ] **Step 1: Create SFX Synthesizer**
+- [x] **Step 1: Create SFX Synthesizer**
 
 ```typescript
 // frontend/src/renderer/sfx/synthesizer.ts
@@ -2568,12 +2568,12 @@ export class SFXSynthesizer {
 }
 ```
 
-- [ ] **Step 2: Build and verify**
+- [x] **Step 2: Build and verify**
 
 Run: `cd frontend && npm run build`
 Expected: TypeScript compiles without errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/renderer/sfx/synthesizer.ts
@@ -2591,7 +2591,7 @@ git commit -m "feat: Web Audio SFX synthesizer with Iron Man sounds"
 **Interfaces:**
 - Consumes: `settings_request` events, sends `config_update` to backend
 
-- [ ] **Step 1: Create Settings panel**
+- [x] **Step 1: Create Settings panel**
 
 ```typescript
 // frontend/src/renderer/hud/panels/settings.ts
@@ -2619,12 +2619,12 @@ export class SettingsPanel {
 }
 ```
 
-- [ ] **Step 2: Build and verify**
+- [x] **Step 2: Build and verify**
 
 Run: `cd frontend && npm run build`
 Expected: TypeScript compiles without errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/renderer/hud/panels/settings.ts
@@ -2645,7 +2645,7 @@ git commit -m "feat: Settings panel skeleton"
 **Interfaces:**
 - Consumes: All previous tasks
 
-- [ ] **Step 1: Create dev script**
+- [x] **Step 1: Create dev script**
 
 ```bash
 #!/bin/bash
@@ -2671,7 +2671,7 @@ trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null" EXIT
 wait
 ```
 
-- [ ] **Step 2: Create setup script**
+- [x] **Step 2: Create setup script**
 
 ```bash
 #!/bin/bash
@@ -2695,11 +2695,11 @@ npm install
 echo "Setup complete! Run ./scripts/dev.sh to start."
 ```
 
-- [ ] **Step 3: Make scripts executable**
+- [x] **Step 3: Make scripts executable**
 
 Run: `chmod +x scripts/dev.sh scripts/setup.sh`
 
-- [ ] **Step 4: Create README**
+- [x] **Step 4: Create README**
 
 ```markdown
 # Jarvis AI
@@ -2732,7 +2732,7 @@ Voice-interactive desktop AI assistant inspired by JARVIS from Iron Man.
 Drop `.py` files into `backend/jarvis/plugins/builtins/` to add new backends.
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/ README.md

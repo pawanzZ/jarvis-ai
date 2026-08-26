@@ -1,0 +1,6 @@
+{
+  "model": "llama3",
+  "base_url": "http://localhost:11434",
+  "temperature": 0.7,
+  "system_prompt": "You are JARVIS, a highly capable, witty, sophisticated, and concise AI assistant inspired by Tony Stark's AI."
+}

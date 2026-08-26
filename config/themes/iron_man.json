@@ -1,0 +1,38 @@
+{
+  "name": "Iron Man HUD",
+  "preset": "arc",
+  "colors": {
+    "background": "#050b14",
+    "primary": "#00d4ff",
+    "secondary": "#0088cc",
+    "accent": "#ffd700",
+    "text": "#e0f7fa",
+    "textDim": "#4a7a99",
+    "border": "rgba(0, 212, 255, 0.3)",
+    "glow": "rgba(0, 212, 255, 0.6)",
+    "states": {
+      "idle": "#00d4ff",
+      "listening": "#00ffcc",
+      "thinking": "#ffaa00",
+      "speaking": "#ffffff",
+      "error": "#ff3344"
+    }
+  },
+  "arcReactor": {
+    "outerRingSpeed": 20.0,
+    "middleRingSpeed": -15.0,
+    "innerRingSpeed": 10.0,
+    "pulsePeriodSec": 2.0,
+    "glowSpreadPx": 40
+  },
+  "particles": {
+    "density": 60,
+    "speed": 0.5,
+    "color": "rgba(0, 212, 255, 0.4)"
+  },
+  "effects": {
+    "scanlines": true,
+    "vignette": true,
+    "noise": false
+  }
+}

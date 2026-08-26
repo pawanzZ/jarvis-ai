@@ -1,0 +1,7 @@
+{
+  "voice": "en_US-lessac-medium",
+  "rate": 1.0,
+  "volume": 1.0,
+  "sample_rate": 22050,
+  "engine": "auto"
+}

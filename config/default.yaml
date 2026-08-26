@@ -1,0 +1,115 @@
+# ==============================================================================
+# Jarvis AI - Master System Configuration
+# ==============================================================================
+# Unified default configuration schema covering core server, audio subsystem,
+# pluggable AI backends (STT, TTS, LLM), activation methods, vision telemetry,
+# visual HUD appearance, and procedural Web Audio sound synthesizer.
+# ==============================================================================
+
+# Core System & IPC Settings
+core:
+  host: "127.0.0.1"
+  port: 8765
+  debug: false
+  log_level: "INFO"
+  default_state: "idle"
+  auto_reconnect: true
+
+# WebSocket Server Configuration
+ws_server:
+  host: "0.0.0.0"
+  port: 8765
+  ping_interval: 20
+  ping_timeout: 10
+  max_payload_bytes: 10485760  # 10MB for audio/vision buffers
+
+# Audio Subsystem Configuration
+audio:
+  sample_rate: 16000
+  chunk_size: 1024
+  channels: 1
+  vad_threshold: 0.02
+  silence_duration_ms: 800
+  mic_device: null
+  speaker_device: null
+
+# Pluggable AI Subsystems & Builtin Plugins
+plugins:
+  # Speech-to-Text (STT)
+  whisper:
+    enabled: true
+    plugin_name: "whisper_local"
+    model: "base"
+    language: "en"
+    engine: "auto"  # options: auto, faster-whisper, whisper.cpp, mock
+    beam_size: 5
+    temperature: 0.0
+
+  # Text-to-Speech (TTS)
+  piper:
+    enabled: true
+    plugin_name: "piper_tts"
+    voice: "en_US-lessac-medium"
+    rate: 1.0
+    volume: 1.0
+    sample_rate: 22050
+    engine: "auto"  # options: auto, piper, speech-dispatcher, mock
+
+  # Large Language Model (LLM Brain)
+  ollama:
+    enabled: true
+    plugin_name: "ollama_llm"
+    model: "llama3"
+    base_url: "http://localhost:11434"
+    temperature: 0.7
+    max_tokens: 512
+    system_prompt: >-
+      You are JARVIS, a highly capable, witty, sophisticated, and concise AI assistant inspired by Tony Stark's AI.
+      Keep answers clear, intelligent, and natural.
+
+  # Push-to-Talk Activation Trigger
+  push_to_talk:
+    enabled: true
+    plugin_name: "push_to_talk"
+    key: "space"
+    mode: "hold"  # options: hold, toggle
+
+  # Double-Clap Activation Trigger
+  clap_detector:
+    enabled: true
+    plugin_name: "clap_detector"
+    threshold: 0.7
+    window_ms: 500
+    min_interval_ms: 50
+
+  # Face & Attention Tracking Vision Plugin
+  face_tracker:
+    enabled: true
+    plugin_name: "face_tracker"
+    camera: 0
+    min_confidence: 0.5
+    gaze_enabled: true
+    fps: 30
+
+# Visual HUD Appearance & Layout
+appearance:
+  theme: "iron_man"
+  preset: "arc"
+  particle_density: 60
+  crt_scanlines: true
+  glow_intensity: 1.0
+  ui_scale: 1.0
+  window:
+    fullscreen: true
+    transparent: true
+    frame: false
+    always_on_top: false
+
+# Procedural Web Audio Sound Effects Synthesizer
+sfx:
+  master_volume: 0.5
+  power_up_enabled: true
+  chimes_enabled: true
+  hum_enabled: true
+  error_buzz_enabled: true
+  thinking_whirr_enabled: true

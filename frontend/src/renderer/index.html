@@ -3,31 +3,233 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jarvis AI</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0a0f;
-      color: #e0e0e0;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      overflow: hidden;
-      height: 100vh;
-      width: 100vw;
-    }
-    #app {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-  </style>
+  <title>Jarvis AI - Iron Man HUD</title>
+  <link rel="stylesheet" href="hud/layout.css">
+  <link rel="stylesheet" href="hud/arc-reactor.css">
+  <link rel="stylesheet" href="hud/panels/settings.css">
 </head>
 <body>
+  <!-- CRT Scanlines & Vignette Overlay -->
+  <div class="crt-overlay"></div>
+
+  <!-- HUD Container -->
   <div id="app">
-    <div id="status-bar"></div>
-    <div id="main-area"></div>
-    <div id="transcript-bar"></div>
+    <!-- Corner Framing Accents -->
+    <div class="hud-corner top-left"></div>
+    <div class="hud-corner top-right"></div>
+    <div class="hud-corner bottom-left"></div>
+    <div class="hud-corner bottom-right"></div>
+
+    <!-- Top Status Bar -->
+    <header id="status-bar"></header>
+
+    <!-- 3-Panel Main Area -->
+    <main id="main-area">
+      <!-- Left Panel: Diagnostics & Plugins -->
+      <aside class="hud-panel" id="left-panel">
+        <div class="panel-header">
+          <span>SYSTEM DIAGNOSTICS</span>
+          <span style="font-size: 10px; color: var(--accent-green);">ONLINE</span>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">Core Subsystems</div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">EVENT LOOP</span>
+            <span class="telemetry-value">ASYNCIO (1000Hz)</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">WEBSOCKET</span>
+            <span class="telemetry-value">PORT 8765</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">AUDIO ENGINE</span>
+            <span class="telemetry-value">WEB AUDIO API</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">RENDER PIPELINE</span>
+            <span class="telemetry-value">60 FPS // 2D CANVAS</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">Active AI Plugins</div>
+          <div class="plugin-badge-list" id="plugin-list">
+            <span class="plugin-tag">whisper_local</span>
+            <span class="plugin-tag">piper_tts</span>
+            <span class="plugin-tag">ollama_llm</span>
+            <span class="plugin-tag">push_to_talk</span>
+            <span class="plugin-tag">clap_detector</span>
+            <span class="plugin-tag">face_tracker</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">Quick Commands</div>
+          <button class="hud-action-btn" id="btn-quick-ptt">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+            </svg>
+            <span>PUSH TO TALK (SPACE)</span>
+          </button>
+          <button class="hud-action-btn" id="btn-quick-clear">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>CLEAR TRANSCRIPT</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Center Viewport: Particle & Waveform Canvases + ARC Reactor -->
+      <section id="center-area">
+        <canvas class="canvas-layer" id="particle-canvas"></canvas>
+        <canvas class="canvas-layer" id="waveform-canvas"></canvas>
+        <div class="hud-reticle"></div>
+        <div id="core-viewport">
+          <div id="core-container"></div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Vision & Telemetry Feed -->
+      <aside class="hud-panel" id="right-panel">
+        <div class="panel-header">
+          <span>VISION & TELEMETRY</span>
+          <span style="font-size: 10px; color: var(--accent-cyan);">ACTIVE</span>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">Face Mesh Telemetry</div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">PITCH</span>
+            <span class="telemetry-value" id="telem-pitch">0.0°</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">YAW</span>
+            <span class="telemetry-value" id="telem-yaw">0.0°</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">ROLL</span>
+            <span class="telemetry-value" id="telem-roll">0.0°</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">GAZE VECTOR</span>
+            <span class="telemetry-value" id="telem-gaze">[0.50, 0.50]</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">Acoustic Sensor</div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">BANDWIDTH</span>
+            <span class="telemetry-value">16kHz / 16-BIT</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">VAD SENSITIVITY</span>
+            <span class="telemetry-value">ENERGY (0.80)</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">CLAP DETECTOR</span>
+            <span class="telemetry-value">ARMED</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">Neural Engine</div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">STATUS</span>
+            <span class="telemetry-value" style="color: var(--accent-green);">READY</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">TEMPERATURE</span>
+            <span class="telemetry-value">0.70</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-label">CONTEXT WINDOW</span>
+            <span class="telemetry-value">4096 TOKENS</span>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Bottom Transcript Bar -->
+    <footer id="transcript-bar"></footer>
   </div>
+
+  <!-- Slide-out Settings Drawer & Backdrop -->
+  <div class="settings-backdrop" id="settings-backdrop"></div>
+  <div id="settings-drawer"></div>
+
+  <!-- Browser CommonJS Module Loader & Application Scripts -->
+  <script>
+    (function() {
+      const exportsMap = {};
+      window.__exportsMap = exportsMap;
+      window.exports = {};
+      window.module = { exports: window.exports };
+
+      window.require = function(path) {
+        const parts = path.split('/');
+        const file = parts.pop().replace(/\.js$/, '');
+        if (exportsMap[file]) return exportsMap[file];
+        // Check fuzzy match
+        for (const k in exportsMap) {
+          if (k.endsWith(file)) return exportsMap[k];
+        }
+        return window.exports;
+      };
+
+      window.__loadModule = function(name, callback) {
+        window.exports = {};
+        window.module = { exports: window.exports };
+        callback();
+        exportsMap[name] = window.module.exports;
+      };
+    })();
+  </script>
+
+  <!-- Load Compiled Modules In Dependency Order -->
+  <script>window.__loadModule('types', function() {});</script>
+  <script src="core/types.js"></script>
+  <script>window.__exportsMap['types'] = window.exports;</script>
+
+  <script>window.__loadModule('synthesizer', function() {});</script>
+  <script src="sfx/synthesizer.js"></script>
+  <script>window.__exportsMap['synthesizer'] = window.exports;</script>
+
+  <script>window.__loadModule('arc-reactor', function() {});</script>
+  <script src="hud/arc-reactor.js"></script>
+  <script>window.__exportsMap['arc-reactor'] = window.exports;</script>
+
+  <script>window.__loadModule('waveform', function() {});</script>
+  <script src="hud/waveform.js"></script>
+  <script>window.__exportsMap['waveform'] = window.exports;</script>
+
+  <script>window.__loadModule('particles', function() {});</script>
+  <script src="hud/particles.js"></script>
+  <script>window.__exportsMap['particles'] = window.exports;</script>
+
+  <script>window.__loadModule('status-bar', function() {});</script>
+  <script src="hud/status-bar.js"></script>
+  <script>window.__exportsMap['status-bar'] = window.exports;</script>
+
+  <script>window.__loadModule('transcript-bar', function() {});</script>
+  <script src="hud/transcript-bar.js"></script>
+  <script>window.__exportsMap['transcript-bar'] = window.exports;</script>
+
+  <script>window.__loadModule('ws-client', function() {});</script>
+  <script src="core/ws-client.js"></script>
+  <script>window.__exportsMap['ws-client'] = window.exports;</script>
+
+  <script>window.__loadModule('settings', function() {});</script>
+  <script src="hud/panels/settings.js"></script>
+  <script>window.__exportsMap['settings'] = window.exports;</script>
+
+  <script>window.__loadModule('app', function() {});</script>
   <script src="core/app.js"></script>
+  <script>window.__exportsMap['app'] = window.exports;</script>
 </body>
 </html>

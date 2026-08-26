@@ -1,0 +1,467 @@
+/* ==========================================================================
+   Jarvis AI - Iron Man HUD Theme & Layout Stylesheet
+   Full-screen glassmorphism HUD with cyan/blue/amber accents, CRT scanlines,
+   glow filters, responsive 3-panel grid, and futuristic HUD framing.
+   ========================================================================== */
+
+:root {
+  --bg-primary: #060911;
+  --bg-secondary: #0a0f1d;
+  --bg-panel: rgba(8, 16, 32, 0.78);
+  --bg-panel-border: rgba(0, 180, 255, 0.25);
+  --bg-glass: rgba(10, 25, 48, 0.65);
+  --bg-glass-hover: rgba(0, 212, 255, 0.15);
+
+  /* Iron Man HUD Color Palette */
+  --accent-cyan: #00d4ff;
+  --accent-blue: #0088ff;
+  --accent-glow: rgba(0, 212, 255, 0.6);
+  --accent-amber: #ffaa00;
+  --accent-gold: #ffd700;
+  --accent-red: #ff3344;
+  --accent-green: #00ff88;
+  --accent-white: #f0f8ff;
+
+  /* State Colors */
+  --state-idle: #0088ff;
+  --state-listening: #00d4ff;
+  --state-thinking: #ffaa00;
+  --state-speaking: #f0f8ff;
+  --state-error: #ff3344;
+
+  /* Typography */
+  --font-mono: 'SF Mono', 'Roboto Mono', 'Fira Code', 'Courier New', monospace;
+  --font-hud: 'Segoe UI', 'Electrolize', -apple-system, BlinkMacSystemFont, sans-serif;
+  --text-primary: #e6f1ff;
+  --text-secondary: #7f9bb3;
+  --text-muted: #4a637d;
+  --text-accent: #00d4ff;
+
+  /* Spacing & Borders */
+  --panel-radius: 6px;
+  --hud-border-glow: 0 0 10px rgba(0, 180, 255, 0.35);
+  --hud-text-glow: 0 0 8px rgba(0, 212, 255, 0.7);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  font-family: var(--font-hud);
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+/* --------------------------------------------------------------------------
+   Scanline & Vignette Overlay Layer
+   -------------------------------------------------------------------------- */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 999;
+  background:
+    radial-gradient(ellipse at center, transparent 60%, rgba(3, 8, 16, 0.75) 100%),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 180, 255, 0.02) 3px,
+      rgba(0, 180, 255, 0.02) 4px
+    );
+}
+
+/* --------------------------------------------------------------------------
+   Master App Container
+   -------------------------------------------------------------------------- */
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: radial-gradient(circle at center, #0c1527 0%, #060911 80%);
+}
+
+/* HUD Corner Brackets Frame */
+.hud-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--accent-cyan);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 100;
+}
+.hud-corner.top-left { top: 8px; left: 8px; border-right: none; border-bottom: none; }
+.hud-corner.top-right { top: 8px; right: 8px; border-left: none; border-bottom: none; }
+.hud-corner.bottom-left { bottom: 8px; left: 8px; border-right: none; border-top: none; }
+.hud-corner.bottom-right { bottom: 8px; right: 8px; border-left: none; border-top: none; }
+
+/* --------------------------------------------------------------------------
+   Top Status Bar
+   -------------------------------------------------------------------------- */
+#status-bar {
+  height: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--bg-panel-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.status-left, .status-center, .status-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent-cyan);
+  text-shadow: var(--hud-text-glow);
+  letter-spacing: 2px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(0, 180, 255, 0.1);
+  border: 1px solid rgba(0, 180, 255, 0.3);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+  transition: all 0.3s ease;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.status-item .label {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.status-item .val {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.status-btn {
+  background: rgba(0, 180, 255, 0.1);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.status-btn:hover {
+  background: rgba(0, 212, 255, 0.25);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   3-Panel Main Area
+   -------------------------------------------------------------------------- */
+#main-area {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Side Panels */
+.hud-panel {
+  background: var(--bg-panel);
+  border-left: 1px solid var(--bg-panel-border);
+  border-right: 1px solid var(--bg-panel-border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+  z-index: 20;
+}
+
+.hud-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.hud-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hud-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 180, 255, 0.2);
+  border-radius: 2px;
+}
+
+.panel-header {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid rgba(0, 180, 255, 0.2);
+  padding-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-section {
+  background: var(--bg-glass);
+  border: 1px solid rgba(0, 180, 255, 0.15);
+  border-radius: var(--panel-radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Diagnostic / Telemetry Items */
+.telemetry-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.telemetry-label {
+  color: var(--text-muted);
+}
+.telemetry-value {
+  color: var(--text-accent);
+}
+
+/* Plugin Badges */
+.plugin-badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plugin-tag {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  color: var(--accent-cyan);
+}
+
+/* Quick Action Buttons */
+.hud-action-btn {
+  background: rgba(0, 180, 255, 0.12);
+  border: 1px solid rgba(0, 180, 255, 0.3);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: var(--panel-radius);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.hud-action-btn:hover {
+  background: rgba(0, 212, 255, 0.25);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.hud-action-btn.active {
+  background: rgba(0, 212, 255, 0.4);
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Center Viewport & Canvas Stacking
+   -------------------------------------------------------------------------- */
+#center-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Canvas Layers */
+.canvas-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#particle-canvas {
+  z-index: 5;
+}
+
+#waveform-canvas {
+  z-index: 10;
+}
+
+#core-viewport {
+  position: relative;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Crosshairs & Target Reticle */
+.hud-reticle {
+  position: absolute;
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 180, 255, 0.18);
+  pointer-events: none;
+  z-index: 8;
+  animation: reticle-pulse 8s linear infinite;
+}
+
+@keyframes reticle-pulse {
+  0% { transform: rotate(0deg) scale(0.98); opacity: 0.3; }
+  50% { transform: rotate(180deg) scale(1.02); opacity: 0.6; }
+  100% { transform: rotate(360deg) scale(0.98); opacity: 0.3; }
+}
+
+/* --------------------------------------------------------------------------
+   Bottom Transcript Bar
+   -------------------------------------------------------------------------- */
+#transcript-bar {
+  min-height: 80px;
+  max-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 32px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--bg-panel-border);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+  position: relative;
+}
+
+.transcript-speaker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transcript-content {
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  font-weight: 400;
+  min-height: 26px;
+  word-break: break-word;
+  transition: color 0.2s ease;
+}
+
+.transcript-content.partial {
+  color: var(--accent-cyan);
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.transcript-content.user-speech {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.transcript-content.assistant-speech {
+  color: var(--text-primary);
+}
+
+.typing-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background-color: var(--accent-cyan);
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* State Modifier Classes */
+.state-idle .status-dot { background: var(--state-idle); box-shadow: 0 0 8px var(--state-idle); }
+.state-listening .status-dot { background: var(--state-listening); box-shadow: 0 0 12px var(--state-listening); }
+.state-thinking .status-dot { background: var(--state-thinking); box-shadow: 0 0 12px var(--state-thinking); }
+.state-speaking .status-dot { background: var(--state-speaking); box-shadow: 0 0 14px var(--state-speaking); }
+.state-error .status-dot { background: var(--state-error); box-shadow: 0 0 14px var(--state-error); }

@@ -1,0 +1,244 @@
+/* ==========================================================================
+   Jarvis AI - Multi-Ring ARC Reactor Stylesheet
+   Keyframe rotations, radial glow filters, segmented rings, and dynamic
+   state animations for the center-stage Iron Man ARC Reactor.
+   ========================================================================== */
+
+#core-container {
+  width: 320px;
+  height: 320px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Base Concentric Rings */
+.reactor-ring {
+  position: absolute;
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Outer Segmented Ring */
+.reactor-outer {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed rgba(0, 180, 255, 0.4);
+  box-shadow: 0 0 20px rgba(0, 180, 255, 0.2), inset 0 0 20px rgba(0, 180, 255, 0.15);
+  animation: reactor-rotate-cw 24s linear infinite;
+}
+
+.reactor-outer-ticks {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  animation: reactor-rotate-ccw 36s linear infinite;
+}
+
+/* Middle Ring */
+.reactor-middle {
+  width: 72%;
+  height: 72%;
+  border: 2px solid var(--accent-cyan);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.35);
+  animation: reactor-rotate-ccw 14s linear infinite;
+}
+
+/* Inner Ring */
+.reactor-inner {
+  width: 44%;
+  height: 44%;
+  border: 2px dashed var(--accent-white);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  animation: reactor-rotate-cw 8s linear infinite;
+}
+
+/* Central Glowing Core */
+.reactor-core {
+  position: absolute;
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #ffffff 10%, #00d4ff 60%, #004488 100%);
+  box-shadow:
+    0 0 25px var(--accent-cyan),
+    0 0 50px var(--accent-cyan),
+    0 0 80px rgba(0, 180, 255, 0.5);
+  animation: reactor-pulse-idle 2.5s ease-in-out infinite;
+  transition: background 0.4s ease, box-shadow 0.4s ease, transform 0.1s ease-out;
+  z-index: 10;
+}
+
+/* Audio Ripple Ring (Generated dynamically during audio interaction) */
+.reactor-ripple {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid var(--accent-cyan);
+  opacity: 0;
+  animation: ripple-expand 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes ripple-expand {
+  0% { width: 22%; height: 22%; opacity: 0.8; }
+  100% { width: 110%; height: 110%; opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Keyframe Rotations & Pulses
+   -------------------------------------------------------------------------- */
+@keyframes reactor-rotate-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes reactor-rotate-ccw {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes reactor-pulse-idle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+    box-shadow: 0 0 25px var(--accent-cyan), 0 0 50px rgba(0, 180, 255, 0.4);
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+    box-shadow: 0 0 35px var(--accent-cyan), 0 0 70px rgba(0, 180, 255, 0.7);
+  }
+}
+
+@keyframes reactor-pulse-listening {
+  0%, 100% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+    box-shadow: 0 0 45px var(--accent-cyan), 0 0 90px var(--accent-cyan);
+  }
+}
+
+@keyframes reactor-spin-thinking {
+  0% {
+    transform: rotate(0deg) scale(1.05);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.15);
+  }
+  100% {
+    transform: rotate(360deg) scale(1.05);
+  }
+}
+
+@keyframes reactor-pulse-speaking {
+  0%, 100% {
+    transform: scale(1.05);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 1;
+    box-shadow: 0 0 55px #ffffff, 0 0 110px var(--accent-cyan);
+  }
+}
+
+@keyframes reactor-error-glitch {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.9;
+  }
+  20% {
+    transform: translate(-3px, 2px) scale(1.08);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(3px, -2px) scale(0.95);
+    opacity: 0.7;
+  }
+  60% {
+    transform: translate(-2px, -3px) scale(1.12);
+    opacity: 1;
+  }
+  80% {
+    transform: translate(2px, 1px) scale(1.02);
+    opacity: 0.8;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   State Modifiers for ARC Reactor
+   -------------------------------------------------------------------------- */
+
+/* IDLE State */
+.reactor-core.state-idle {
+  background: radial-gradient(circle at center, #ffffff 15%, #0088ff 60%, #003366 100%);
+  animation: reactor-pulse-idle 2.5s ease-in-out infinite;
+}
+
+/* LISTENING State */
+.reactor-core.state-listening {
+  background: radial-gradient(circle at center, #ffffff 25%, #00d4ff 70%, #005588 100%);
+  box-shadow: 0 0 40px var(--accent-cyan), 0 0 80px var(--accent-cyan), 0 0 120px rgba(0, 212, 255, 0.4);
+  animation: reactor-pulse-listening 0.6s ease-in-out infinite;
+}
+.state-listening .reactor-middle {
+  border-color: var(--accent-cyan);
+  animation-duration: 6s;
+}
+.state-listening .reactor-inner {
+  border-color: #ffffff;
+  animation-duration: 4s;
+}
+
+/* THINKING State */
+.reactor-core.state-thinking {
+  background: radial-gradient(circle at center, #ffffff 20%, #ffaa00 65%, #884400 100%);
+  box-shadow: 0 0 45px var(--accent-amber), 0 0 90px var(--accent-gold), 0 0 130px rgba(255, 170, 0, 0.5);
+  animation: reactor-spin-thinking 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.state-thinking .reactor-middle {
+  border-color: var(--accent-amber);
+  animation-duration: 4s;
+}
+.state-thinking .reactor-inner {
+  border-color: var(--accent-gold);
+  animation-duration: 2.5s;
+}
+
+/* SPEAKING State */
+.reactor-core.state-speaking {
+  background: radial-gradient(circle at center, #ffffff 35%, #00d4ff 75%, #002244 100%);
+  box-shadow: 0 0 50px #ffffff, 0 0 100px var(--accent-cyan), 0 0 150px rgba(0, 212, 255, 0.6);
+  animation: reactor-pulse-speaking 0.35s ease-in-out infinite;
+}
+.state-speaking .reactor-middle {
+  border-color: #ffffff;
+  animation-duration: 5s;
+}
+.state-speaking .reactor-inner {
+  border-color: var(--accent-cyan);
+  animation-duration: 3s;
+}
+
+/* ERROR State */
+.reactor-core.state-error {
+  background: radial-gradient(circle at center, #ffffff 20%, #ff3344 70%, #660011 100%);
+  box-shadow: 0 0 45px var(--accent-red), 0 0 90px var(--accent-red), 0 0 130px rgba(255, 51, 68, 0.6);
+  animation: reactor-error-glitch 0.25s steps(3, end) infinite;
+}
+.state-error .reactor-middle {
+  border-color: var(--accent-red);
+}
+.state-error .reactor-inner {
+  border-color: var(--accent-red);
+}

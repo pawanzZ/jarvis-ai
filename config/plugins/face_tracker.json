@@ -1,0 +1,5 @@
+{
+  "camera": 0,
+  "min_confidence": 0.5,
+  "gaze_enabled": true
+}

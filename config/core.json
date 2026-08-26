@@ -1,0 +1,12 @@
+{
+  "host": "127.0.0.1",
+  "port": 8765,
+  "debug": false,
+  "log_level": "INFO",
+  "default_state": "idle",
+  "theme": "iron_man",
+  "audio": {
+    "sample_rate": 16000,
+    "chunk_size": 1024
+  }
+}

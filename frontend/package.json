@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc && electron dist/main.js",
+    "build": "tsc && node scripts/copy-assets.js",
+    "test": "npm run build && node scripts/test-modules.js",
+    "dev": "npm run build && electron dist/main.js",
     "start": "electron dist/main.js"
   },
   "devDependencies": {

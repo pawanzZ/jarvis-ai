@@ -34,6 +34,11 @@ class EventBus:
     async def process(self) -> None:
         while True:
             event = await self._queue.get()
-            handlers = self._handlers.get(event.type, [])
+            handlers = list(self._handlers.get(event.type, []))
             for handler in handlers:
-                await handler(event)
+                try:
+                    res = handler(event)
+                    if asyncio.iscoroutine(res):
+                        await res
+                except Exception as e:
+                    print(f"Error in event handler for {event.type}: {e}")

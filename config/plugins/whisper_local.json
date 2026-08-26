@@ -1,0 +1,7 @@
+{
+  "model": "base",
+  "language": "en",
+  "engine": "auto",
+  "beam_size": 5,
+  "temperature": 0.0
+}
