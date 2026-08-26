@@ -31,6 +31,18 @@ async def test_off_removes_handler():
         received.append(event)
 
     bus.on("test", handler)
+
+    # Emit and dispatch — handler should fire
+    await bus.emit(Event(type="test", data={"round": 1}))
+    event = await asyncio.wait_for(bus._queue.get(), timeout=1)
+    for h in bus._handlers.get(event.type, []):
+        await h(event)
+    assert len(received) == 1
+
+    # Remove handler, emit again — handler should NOT fire
     bus.off("test", handler)
-    await bus.emit(Event(type="test"))
-    assert bus._queue.empty() or len(received) == 0
+    await bus.emit(Event(type="test", data={"round": 2}))
+    event = await asyncio.wait_for(bus._queue.get(), timeout=1)
+    for h in bus._handlers.get(event.type, []):
+        await h(event)
+    assert len(received) == 1, "handler should not fire after off()"
