@@ -1,8 +1,9 @@
 {
-  "theme": "matrix",
+  "theme": "arc",
   "particleDensity": 60,
   "crtScanlines": true,
   "glowIntensity": 1,
   "uiScale": 1,
-  "core_variant": "arc_reactor"
+  "core_variant": "particle_orb",
+  "coreVariant": "arc_reactor"
 }
