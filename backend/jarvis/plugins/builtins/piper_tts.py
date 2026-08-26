@@ -164,12 +164,12 @@ class PiperTTSPlugin(Plugin):
                 if self.bus:
                     await self.bus.emit(chunk_event)
                     await self.bus.emit(level_event)
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.002)
 
             # Playback audio through hardware speakers
             played = False
-            # 1. Attempt natural neural Edge-TTS if online and not short test
-            if len(text) > 8 and self._engine in ("edge-tts", "auto"):
+            # 1. Attempt natural neural Edge-TTS if online and conversational (not short test phrases)
+            if len(text) > 15 and self._engine in ("edge-tts", "auto"):
                 try:
                     import edge_tts  # type: ignore
 
@@ -206,10 +206,10 @@ class PiperTTSPlugin(Plugin):
                     arr = np.asarray(samples, dtype=np.float32)
                     sd.play(arr, samplerate=self._sample_rate)
                     duration = len(samples) / self._sample_rate
-                    await asyncio.sleep(min(0.25, duration))
+                    await asyncio.sleep(min(0.05, duration))
                     sd.stop()
                 except Exception:
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.01)
 
             done_event = Event(
                 type="tts_done",

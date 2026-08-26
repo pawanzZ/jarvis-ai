@@ -19,12 +19,14 @@ class WSServer:
         bus: EventBus,
         state: StateMachine,
         config: Optional[Config] = None,
+        system_monitor: Optional[Any] = None,
         host: str = "localhost",
         port: int = 8765,
     ) -> None:
         self.bus = bus
         self.state = state
         self.config = config
+        self.system_monitor = system_monitor
         self.host = host
         self.port = port
         self._clients: set[Any] = set()
@@ -231,6 +233,28 @@ class WSServer:
                     pass
             else:
                 await self.broadcast(resp)
+        elif msg_type == "telemetry_request":
+            if self.system_monitor:
+                telemetry = self.system_monitor.get_telemetry_snapshot()
+                resp = {"type": "system_telemetry", "data": telemetry}
+                if ws is not None:
+                    try:
+                        await ws.send(json.dumps(resp))
+                    except websockets.ConnectionClosed:
+                        pass
+                else:
+                    await self.broadcast(resp)
+        elif msg_type == "weather_request":
+            if self.system_monitor:
+                weather = self.system_monitor.get_weather_telemetry()
+                resp = {"type": "weather_telemetry", "data": weather}
+                if ws is not None:
+                    try:
+                        await ws.send(json.dumps(resp))
+                    except websockets.ConnectionClosed:
+                        pass
+                else:
+                    await self.broadcast(resp)
 
     async def broadcast(self, data: dict[str, Any]) -> None:
         message = json.dumps(data)

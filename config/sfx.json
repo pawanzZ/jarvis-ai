@@ -1,0 +1,8 @@
+{
+  "masterVolume": 0.5,
+  "powerUpEnabled": true,
+  "chimesEnabled": true,
+  "humEnabled": true,
+  "errorBuzzEnabled": true,
+  "thinkingWhirrEnabled": true
+}

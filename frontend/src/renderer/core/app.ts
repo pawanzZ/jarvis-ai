@@ -19,6 +19,8 @@ import {
   PluginLoadedEvent,
   SettingsResponseEvent,
   ConfigUpdatedEvent,
+  SystemTelemetryEvent,
+  WeatherTelemetryEvent,
   BackendErrorEvent,
   SettingsConfig,
 } from "./types";
@@ -28,6 +30,7 @@ import { ParticleSystem } from "../hud/particles";
 import { StatusBar } from "../hud/status-bar";
 import { TranscriptBar } from "../hud/transcript-bar";
 import { SettingsPanel } from "../hud/panels/settings";
+import { SystemMonitorHUD } from "../hud/system-monitor";
 import { SFXSynthesizer } from "../sfx/synthesizer";
 
 export class JarvisApp {
@@ -39,6 +42,7 @@ export class JarvisApp {
   private statusBar: StatusBar;
   private transcriptBar: TranscriptBar;
   private settingsPanel: SettingsPanel;
+  private systemMonitor: SystemMonitorHUD;
   private state: JarvisState = "idle";
   private activePlugins: Set<string> = new Set();
 
@@ -76,11 +80,12 @@ export class JarvisApp {
     if (!transcriptBarEl) throw new Error("Missing #transcript-bar");
     this.transcriptBar = new TranscriptBar(transcriptBarEl);
 
-    // 5. Initialize Settings Drawer
+    // 5. Initialize Settings Drawer & System Monitor
     this.settingsPanel = new SettingsPanel(this.ws, {
       onSettingsChange: (newCfg) => this.handleSettingsChange(newCfg),
       onForceState: (state) => this.handleStateTransition(state),
     });
+    this.systemMonitor = new SystemMonitorHUD();
 
     // 6. Setup Event Handlers & Subscriptions
     this.setupWSSubscriptions();
@@ -174,6 +179,25 @@ export class JarvisApp {
       const key = msg.key || msg.data?.key || "";
       const val = msg.value !== undefined ? msg.value : msg.data?.value;
       console.log(`[JarvisApp] Config updated: ${namespace}.${key} =`, val);
+    });
+
+    // System Telemetry (Hardware resources, OS, Screen time)
+    this.ws.on("system_telemetry", (msg: SystemTelemetryEvent) => {
+      const data = msg.data;
+      if (data) {
+        this.systemMonitor.update(data);
+        if (data.weather) {
+          this.statusBar.setWeather(data.weather);
+        }
+      }
+    });
+
+    // Weather & Location Telemetry
+    this.ws.on("weather_telemetry", (msg: WeatherTelemetryEvent) => {
+      const weather = msg.data;
+      if (weather) {
+        this.statusBar.setWeather(weather);
+      }
     });
 
     // Backend Errors

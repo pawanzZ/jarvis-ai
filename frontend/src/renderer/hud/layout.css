@@ -207,6 +207,154 @@ html, body {
   transform: translateY(-1px);
 }
 
+/* Clock & Temporal HUD Widget */
+.hud-clock-widget {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-left: 1px solid rgba(0, 180, 255, 0.25);
+  padding-left: 12px;
+  line-height: 1.2;
+}
+
+.hud-time {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-shadow: var(--hud-text-glow);
+  letter-spacing: 1px;
+}
+
+.hud-date {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+/* Screen Time Active Tracker */
+.hud-screentime-widget {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(255, 170, 0, 0.08);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  font-family: var(--font-mono);
+}
+
+.hud-st-label {
+  font-size: 9px;
+  color: var(--accent-amber);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.hud-st-val {
+  font-size: 11px;
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+/* Weather & Location Widget */
+.hud-weather-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  transition: all 0.3s ease;
+}
+
+.hud-weather-pill:hover {
+  background: rgba(0, 212, 255, 0.16);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.weather-icon {
+  font-size: 12px;
+}
+
+.weather-loc {
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+.weather-temp {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 6px var(--accent-cyan);
+}
+
+.weather-cond {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+/* Hardware Telemetry Blocks & Progress Bars */
+.telemetry-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.hud-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 180, 255, 0.12);
+  border: 1px solid rgba(0, 180, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hud-progress-fill {
+  height: 100%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
+  transition: width 0.4s ease, background 0.3s ease;
+}
+
+.telemetry-subrow {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.telemetry-sublabel {
+  color: var(--text-muted);
+}
+
+.telemetry-subval {
+  color: var(--text-secondary);
+}
+
+.net-rates {
+  display: flex;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.net-rx {
+  color: var(--accent-green);
+  font-weight: 500;
+}
+
+.net-tx {
+  color: var(--accent-cyan);
+  font-weight: 500;
+}
+
 /* --------------------------------------------------------------------------
    3-Panel Main Area
    -------------------------------------------------------------------------- */

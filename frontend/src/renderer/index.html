@@ -25,30 +25,90 @@
 
     <!-- 3-Panel Main Area -->
     <main id="main-area">
-      <!-- Left Panel: Diagnostics & Plugins -->
+      <!-- Left Panel: Diagnostics, System Resources & Host Specs -->
       <aside class="hud-panel" id="left-panel">
         <div class="panel-header">
-          <span>SYSTEM DIAGNOSTICS</span>
+          <span>HARDWARE TELEMETRY</span>
           <span style="font-size: 10px; color: var(--accent-green);">ONLINE</span>
         </div>
 
+        <!-- Hardware Resources Section -->
         <div class="panel-section">
-          <div class="section-title">Core Subsystems</div>
+          <div class="section-title">Compute & Resources</div>
+          
+          <div class="telemetry-block">
+            <div class="telemetry-row">
+              <span class="telemetry-label">CPU USAGE</span>
+              <span class="telemetry-value" id="telem-cpu-val">0.0%</span>
+            </div>
+            <div class="hud-progress-bar">
+              <div class="hud-progress-fill" id="telem-cpu-bar" style="width: 5%;"></div>
+            </div>
+            <div class="telemetry-subrow">
+              <span class="telemetry-sublabel">CORES</span>
+              <span class="telemetry-subval" id="telem-cpu-cores">8 CORES</span>
+            </div>
+          </div>
+
+          <div class="telemetry-block">
+            <div class="telemetry-row">
+              <span class="telemetry-label">GPU ACCELERATOR</span>
+              <span class="telemetry-value" style="color: var(--accent-green);">ACTIVE</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="telemetry-subval" id="telem-gpu-name" style="font-size: 11px; color: var(--text-primary);">Integrated Graphics</span>
+            </div>
+          </div>
+
+          <div class="telemetry-block">
+            <div class="telemetry-row">
+              <span class="telemetry-label">MEMORY (RAM)</span>
+              <span class="telemetry-value" id="telem-mem-val">-- / -- GB</span>
+            </div>
+            <div class="hud-progress-bar">
+              <div class="hud-progress-fill" id="telem-mem-bar" style="width: 25%;"></div>
+            </div>
+          </div>
+
+          <div class="telemetry-block">
+            <div class="telemetry-row">
+              <span class="telemetry-label">PRIMARY STORAGE</span>
+              <span class="telemetry-value" id="telem-disk-val">-- GB FREE</span>
+            </div>
+            <div class="hud-progress-bar">
+              <div class="hud-progress-fill" id="telem-disk-bar" style="width: 40%;"></div>
+            </div>
+          </div>
+
+          <div class="telemetry-block">
+            <div class="telemetry-row">
+              <span class="telemetry-label">NETWORK I/O</span>
+              <div class="net-rates">
+                <span class="net-rx" id="telem-net-rx">▼ 0.0 KB/s</span>
+                <span class="net-tx" id="telem-net-tx">▲ 0.0 KB/s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Operating System & Uptime Section -->
+        <div class="panel-section">
+          <div class="section-title">Host & Operating System</div>
           <div class="telemetry-row">
-            <span class="telemetry-label">EVENT LOOP</span>
-            <span class="telemetry-value">ASYNCIO (1000Hz)</span>
+            <span class="telemetry-label">DISTRIBUTION</span>
+            <span class="telemetry-value" id="telem-os-distro">Linux</span>
           </div>
           <div class="telemetry-row">
-            <span class="telemetry-label">WEBSOCKET</span>
-            <span class="telemetry-value">PORT 8765</span>
+            <span class="telemetry-label">KERNEL</span>
+            <span class="telemetry-value" id="telem-os-kernel" style="font-size: 11px;">7.1.8 (x86_64)</span>
           </div>
           <div class="telemetry-row">
-            <span class="telemetry-label">AUDIO ENGINE</span>
-            <span class="telemetry-value">WEB AUDIO API</span>
+            <span class="telemetry-label">SYS UPTIME</span>
+            <span class="telemetry-value" id="telem-sys-uptime">0h 00m</span>
           </div>
           <div class="telemetry-row">
-            <span class="telemetry-label">RENDER PIPELINE</span>
-            <span class="telemetry-value">60 FPS // 2D CANVAS</span>
+            <span class="telemetry-label">SCREEN TIME</span>
+            <span class="telemetry-value" id="telem-session-time" style="color: var(--accent-gold);">00h 00m 00s</span>
           </div>
         </div>
 
@@ -227,6 +287,10 @@
   <script>window.__loadModule('settings', function() {});</script>
   <script src="hud/panels/settings.js"></script>
   <script>window.__exportsMap['settings'] = window.exports;</script>
+
+  <script>window.__loadModule('system-monitor', function() {});</script>
+  <script src="hud/system-monitor.js"></script>
+  <script>window.__exportsMap['system-monitor'] = window.exports;</script>
 
   <script>window.__loadModule('app', function() {});</script>
   <script src="core/app.js"></script>

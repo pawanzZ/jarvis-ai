@@ -1,0 +1,6 @@
+{
+  "cameraIndex": 0,
+  "faceTrackingEnabled": true,
+  "gazeParallax": true,
+  "helmetBootOverlay": false
+}

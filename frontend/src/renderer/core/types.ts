@@ -157,6 +157,77 @@ export interface BackendErrorEvent {
   };
 }
 
+export interface WeatherTelemetryData {
+  city: string;
+  region: string;
+  country: string;
+  temp_c: number;
+  temp_f: number;
+  feels_like_c: number;
+  condition: string;
+  humidity: number;
+  wind_kmph: number;
+  last_updated: number;
+}
+
+export interface SystemTelemetryData {
+  cpu: {
+    usage_percent: number;
+    cores: number;
+    load_avg: number[];
+  };
+  gpu: {
+    name: string;
+    status: string;
+  };
+  memory: {
+    total_mb: number;
+    used_mb: number;
+    free_mb: number;
+    total_gb: number;
+    used_gb: number;
+    usage_percent: number;
+  };
+  disk: {
+    total_gb: number;
+    used_gb: number;
+    free_gb: number;
+    usage_percent: number;
+  };
+  network: {
+    rx_kbps: number;
+    tx_kbps: number;
+    rx_mbps: number;
+    tx_mbps: number;
+    total_rx_mb: number;
+    total_tx_mb: number;
+  };
+  uptime: {
+    session_seconds: number;
+    session_str: string;
+    system_seconds: number;
+    system_uptime_str: string;
+  };
+  os: {
+    distro: string;
+    kernel: string;
+    arch: string;
+    hostname: string;
+  };
+  weather: WeatherTelemetryData;
+  timestamp: number;
+}
+
+export interface SystemTelemetryEvent {
+  type: "system_telemetry";
+  data: SystemTelemetryData;
+}
+
+export interface WeatherTelemetryEvent {
+  type: "weather_telemetry";
+  data: WeatherTelemetryData;
+}
+
 export type InboundWSMessage =
   | StateChangeEvent
   | TranscriptPartialEvent
@@ -169,6 +240,8 @@ export type InboundWSMessage =
   | PluginLoadedEvent
   | SettingsResponseEvent
   | ConfigUpdatedEvent
+  | SystemTelemetryEvent
+  | WeatherTelemetryEvent
   | PongEvent
   | BackendErrorEvent;
 

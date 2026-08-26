@@ -1,10 +1,10 @@
 /**
  * Jarvis AI - Top Status Bar Controller
  * Manages model badges, interaction mode indicators, state dots,
- * ping/latency telemetry, face attention status, and quick control buttons.
+ * ping/latency telemetry, live digital clock, weather & location, and screen time.
  */
 
-import { JarvisState } from "../core/types";
+import { JarvisState, WeatherTelemetryData } from "../core/types";
 
 export interface StatusBarOptions {
   onSettingsClick?: () => void;
@@ -19,11 +19,18 @@ export class StatusBar {
   private modeIndicator: HTMLElement;
   private pingIndicator: HTMLElement;
   private attentionIndicator: HTMLElement;
-  private audioMeter: HTMLElement;
+  private clockEl: HTMLElement;
+  private dateEl: HTMLElement;
+  private screenTimeValEl: HTMLElement;
+  private locationEl: HTMLElement;
+  private temperatureEl: HTMLElement;
+  private conditionEl: HTMLElement;
   private settingsBtn: HTMLElement;
   private activateBtn: HTMLElement;
   private state: JarvisState = "idle";
   private isConnected = false;
+  private sessionStartTime: number = Date.now();
+  private clockTimer: any = null;
 
   constructor(container: HTMLElement, options: StatusBarOptions = {}) {
     this.container = container;
@@ -41,6 +48,14 @@ export class StatusBar {
           <div class="status-dot"></div>
           <span id="state-label">STANDBY</span>
         </div>
+        <div class="hud-clock-widget">
+          <span class="hud-time" id="hud-clock">00:00:00</span>
+          <span class="hud-date" id="hud-date">THU, 27 AUG</span>
+        </div>
+        <div class="hud-screentime-widget" title="Active Session Screen Time">
+          <span class="hud-st-label">SESSION:</span>
+          <span class="hud-st-val" id="hud-screentime-val">00:00:00</span>
+        </div>
       </div>
 
       <div class="status-center">
@@ -55,6 +70,12 @@ export class StatusBar {
         <div class="status-item">
           <span class="label">ATTENTION:</span>
           <span class="val" id="attention-indicator">--</span>
+        </div>
+        <div class="hud-weather-pill" id="hud-weather-widget" title="Local Atmospheric Telemetry">
+          <span class="weather-icon">📍</span>
+          <span class="weather-loc" id="hud-location">HYDERABAD, IN</span>
+          <span class="weather-temp" id="hud-temp">26°C</span>
+          <span class="weather-cond" id="hud-cond">RAIN</span>
         </div>
       </div>
 
@@ -87,7 +108,12 @@ export class StatusBar {
     this.modeIndicator = this.container.querySelector("#mode-indicator") as HTMLElement;
     this.pingIndicator = this.container.querySelector("#ping-indicator") as HTMLElement;
     this.attentionIndicator = this.container.querySelector("#attention-indicator") as HTMLElement;
-    this.audioMeter = this.container.querySelector("#state-badge") as HTMLElement;
+    this.clockEl = this.container.querySelector("#hud-clock") as HTMLElement;
+    this.dateEl = this.container.querySelector("#hud-date") as HTMLElement;
+    this.screenTimeValEl = this.container.querySelector("#hud-screentime-val") as HTMLElement;
+    this.locationEl = this.container.querySelector("#hud-location") as HTMLElement;
+    this.temperatureEl = this.container.querySelector("#hud-temp") as HTMLElement;
+    this.conditionEl = this.container.querySelector("#hud-cond") as HTMLElement;
     this.settingsBtn = this.container.querySelector("#settings-btn") as HTMLElement;
     this.activateBtn = this.container.querySelector("#activate-btn") as HTMLElement;
 
@@ -96,6 +122,46 @@ export class StatusBar {
     }
     if (options.onActivateClick) {
       this.activateBtn.addEventListener("click", options.onActivateClick);
+    }
+
+    this.startClock();
+  }
+
+  private startClock(): void {
+    const updateTime = () => {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, "0");
+      const m = String(now.getMinutes()).padStart(2, "0");
+      const s = String(now.getSeconds()).padStart(2, "0");
+      this.clockEl.textContent = `${h}:${m}:${s}`;
+
+      const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+      const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+      this.dateEl.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+      // Screen time
+      const elapsedSec = Math.floor((Date.now() - this.sessionStartTime) / 1000);
+      const sh = String(Math.floor(elapsedSec / 3600)).padStart(2, "0");
+      const sm = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, "0");
+      const ss = String(elapsedSec % 60).padStart(2, "0");
+      this.screenTimeValEl.textContent = `${sh}:${sm}:${ss}`;
+    };
+
+    updateTime();
+    this.clockTimer = setInterval(updateTime, 1000);
+  }
+
+  public setWeather(weather: WeatherTelemetryData): void {
+    if (!weather) return;
+    if (this.locationEl && weather.city) {
+      const locStr = weather.region ? `${weather.city}, ${weather.country}` : weather.city;
+      this.locationEl.textContent = locStr.slice(0, 24);
+    }
+    if (this.temperatureEl && weather.temp_c !== undefined) {
+      this.temperatureEl.textContent = `${weather.temp_c}°C`;
+    }
+    if (this.conditionEl && weather.condition) {
+      this.conditionEl.textContent = weather.condition.slice(0, 16);
     }
   }
 
@@ -152,6 +218,13 @@ export class StatusBar {
     } else {
       this.attentionIndicator.textContent = "PASSIVE";
       this.attentionIndicator.style.color = "var(--text-secondary)";
+    }
+  }
+
+  public destroy(): void {
+    if (this.clockTimer) {
+      clearInterval(this.clockTimer);
+      this.clockTimer = null;
     }
   }
 }

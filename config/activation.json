@@ -1,0 +1,9 @@
+{
+  "wakeWordEnabled": true,
+  "wakeWord": "Hey Jarvis",
+  "pttEnabled": true,
+  "pttKey": "Space",
+  "clapEnabled": true,
+  "clapSensitivity": 0.7,
+  "gestureEnabled": false
+}

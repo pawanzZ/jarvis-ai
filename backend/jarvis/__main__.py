@@ -10,6 +10,7 @@ from jarvis.plugins.base import PluginType
 from jarvis.audio.mic_stream import MicStream
 from jarvis.audio.vad import VAD
 from jarvis.audio.speaker_output import SpeakerOutput
+from jarvis.system.monitor import SystemMonitor
 
 
 async def main() -> None:
@@ -17,7 +18,8 @@ async def main() -> None:
     bus = EventBus()
     state = StateMachine()
     config = Config(base_dir)
-    server = WSServer(bus, state, config=config)
+    system_monitor = SystemMonitor()
+    server = WSServer(bus, state, config=config, system_monitor=system_monitor)
     plugin_mgr = PluginManager(bus, config)
 
     # 1. Discover and activate built-in plugins
@@ -237,17 +239,53 @@ async def main() -> None:
     bus.on("activate", handle_activate)
     bus.on("deactivate", handle_deactivate)
 
+    # 6. Telemetry & Weather Broadcast Workers
+    async def telemetry_worker() -> None:
+        while True:
+            try:
+                snapshot = system_monitor.get_telemetry_snapshot()
+                await server.broadcast({
+                    "type": "system_telemetry",
+                    "data": snapshot,
+                })
+                await asyncio.sleep(1.0)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[Jarvis] Telemetry worker error: {e}")
+                await asyncio.sleep(2.0)
+
+    async def weather_worker() -> None:
+        while True:
+            try:
+                weather = await system_monitor.fetch_weather_and_location()
+                await server.broadcast({
+                    "type": "weather_telemetry",
+                    "data": weather,
+                })
+                # Refresh every 10 minutes
+                await asyncio.sleep(600)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[Jarvis] Weather worker error: {e}")
+                await asyncio.sleep(60)
+
     print("Jarvis backend starting...")
 
     # Spawn background tasks
     bus_task = asyncio.create_task(bus.process())
     audio_task = asyncio.create_task(audio_worker())
+    telemetry_task = asyncio.create_task(telemetry_worker())
+    weather_task = asyncio.create_task(weather_worker())
 
     try:
         await server.start()
     finally:
         bus_task.cancel()
         audio_task.cancel()
+        telemetry_task.cancel()
+        weather_task.cancel()
         await mic.stop()
         speaker.stop()
         await plugin_mgr.stop_all()
