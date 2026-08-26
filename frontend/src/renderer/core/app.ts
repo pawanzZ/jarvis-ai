@@ -23,6 +23,7 @@ import {
   WeatherTelemetryEvent,
   BackendErrorEvent,
   SettingsConfig,
+  CoreVisualizerVariant,
 } from "./types";
 import { ArcReactor } from "../hud/arc-reactor";
 import { Waveform } from "../hud/waveform";
@@ -31,12 +32,15 @@ import { StatusBar } from "../hud/status-bar";
 import { TranscriptBar } from "../hud/transcript-bar";
 import { SettingsPanel } from "../hud/panels/settings";
 import { SystemMonitorHUD } from "../hud/system-monitor";
+import { ParticleOrbVisualizer } from "../hud/particle-orb";
 import { SFXSynthesizer } from "../sfx/synthesizer";
 
 export class JarvisApp {
   private ws: WSClient;
   private sfx: SFXSynthesizer;
   private reactor: ArcReactor;
+  private orbVisualizer: ParticleOrbVisualizer;
+  private currentVariant: CoreVisualizerVariant = "arc_reactor";
   private waveform: Waveform;
   private particles: ParticleSystem;
   private statusBar: StatusBar;
@@ -59,6 +63,10 @@ export class JarvisApp {
     const coreContainer = document.getElementById("core-container");
     if (!coreContainer) throw new Error("Missing #core-container");
     this.reactor = new ArcReactor(coreContainer);
+
+    const orbCanvas = document.getElementById("orb-canvas") as HTMLCanvasElement;
+    if (!orbCanvas) throw new Error("Missing #orb-canvas");
+    this.orbVisualizer = new ParticleOrbVisualizer(orbCanvas);
 
     const waveformCanvas = document.getElementById("waveform-canvas") as HTMLCanvasElement;
     if (!waveformCanvas) throw new Error("Missing #waveform-canvas");
@@ -92,7 +100,11 @@ export class JarvisApp {
     this.setupKeyboardShortcuts();
     this.setupQuickControls();
 
-    // 7. Connect to Python backend
+    // 7. Load saved Core Visualizer variant preference
+    const savedVariant = (localStorage.getItem("jarvis_core_variant") as CoreVisualizerVariant) || "arc_reactor";
+    this.setCoreVariant(savedVariant, false);
+
+    // 8. Connect to Python backend
     this.ws.connect();
   }
 
@@ -150,6 +162,7 @@ export class JarvisApp {
       const level = msg.level !== undefined ? msg.level : msg.data?.level || 0;
       this.waveform.updateLevel(level);
       this.reactor.setAudioLevel(level);
+      this.orbVisualizer.setAudioLevel(level);
     });
 
     // Face Tracking Telemetry
@@ -170,6 +183,9 @@ export class JarvisApp {
       const settings = msg.settings || msg.data?.settings;
       if (settings) {
         this.settingsPanel.updateSettings(settings);
+        if (settings.appearance?.coreVariant) {
+          this.setCoreVariant(settings.appearance.coreVariant, false);
+        }
       }
     });
 
@@ -179,6 +195,9 @@ export class JarvisApp {
       const key = msg.key || msg.data?.key || "";
       const val = msg.value !== undefined ? msg.value : msg.data?.value;
       console.log(`[JarvisApp] Config updated: ${namespace}.${key} =`, val);
+      if (namespace === "appearance" && key === "core_variant" && val) {
+        this.setCoreVariant(val as CoreVisualizerVariant, false);
+      }
     });
 
     // System Telemetry (Hardware resources, OS, Screen time)
@@ -219,6 +238,7 @@ export class JarvisApp {
 
     // 1. Update visualizers
     this.reactor.setState(newState);
+    this.orbVisualizer.setState(newState);
     this.waveform.setState(newState);
     this.particles.setState(newState);
     this.statusBar.setState(newState);
@@ -226,6 +246,44 @@ export class JarvisApp {
 
     // 2. Play procedural sound effect
     this.sfx.playStateSound(newState);
+  }
+
+  /**
+   * Switches active core visualizer between ARC Reactor and Perplexity 3D Particle Orb.
+   */
+  public setCoreVariant(variant: CoreVisualizerVariant, notify: boolean = true): void {
+    this.currentVariant = variant;
+    try {
+      localStorage.setItem("jarvis_core_variant", variant);
+    } catch {
+      // Ignored
+    }
+
+    const coreContainer = document.getElementById("core-container");
+    const orbCanvas = document.getElementById("orb-canvas");
+    const btnReactor = document.getElementById("btn-variant-reactor");
+    const btnOrb = document.getElementById("btn-variant-orb");
+
+    if (variant === "particle_orb") {
+      coreContainer?.classList.add("inactive-variant");
+      orbCanvas?.classList.add("active-variant");
+      btnReactor?.classList.remove("active");
+      btnOrb?.classList.add("active");
+      this.orbVisualizer.start();
+      this.orbVisualizer.setState(this.state);
+    } else {
+      coreContainer?.classList.remove("inactive-variant");
+      orbCanvas?.classList.remove("active-variant");
+      btnReactor?.classList.add("active");
+      btnOrb?.classList.remove("active");
+      this.orbVisualizer.stop();
+      this.reactor.setState(this.state);
+    }
+
+    if (notify) {
+      this.ws.updateConfig("appearance", "core_variant", variant);
+      this.sfx.chime();
+    }
   }
 
   private handleFaceTelemetry(msg: FaceDataEvent): void {
@@ -279,6 +337,10 @@ export class JarvisApp {
     this.sfx.setEnabled(settings.sfx.powerUpEnabled);
     this.statusBar.setModel(settings.brain.model);
 
+    if (settings.appearance?.coreVariant && settings.appearance.coreVariant !== this.currentVariant) {
+      this.setCoreVariant(settings.appearance.coreVariant, false);
+    }
+
     // Theme update
     const crtEl = document.querySelector(".crt-overlay") as HTMLElement;
     if (crtEl) {
@@ -299,9 +361,17 @@ export class JarvisApp {
   private setupKeyboardShortcuts(): void {
     window.addEventListener("keydown", (e: KeyboardEvent) => {
       // Space: Toggle Push-to-Talk / Listening
-      if (e.code === "Space" && e.target === document.body) {
+      if (e.code === "Space" && (e.target === document.body || (e.target as HTMLElement).tagName === "BUTTON")) {
         e.preventDefault();
         this.toggleActivation();
+      }
+
+      // KeyV: Toggle Core Visualizer Variant (ARC Reactor <-> Perplexity Orb)
+      if (e.code === "KeyV" && (e.target === document.body || (e.target as HTMLElement).tagName === "BUTTON")) {
+        e.preventDefault();
+        const nextVariant: CoreVisualizerVariant =
+          this.currentVariant === "arc_reactor" ? "particle_orb" : "arc_reactor";
+        this.setCoreVariant(nextVariant);
       }
 
       // Escape: Close Settings or toggle Fullscreen
@@ -326,6 +396,12 @@ export class JarvisApp {
       this.transcriptBar.clear();
       this.waveform.clear();
     });
+
+    const btnReactor = document.getElementById("btn-variant-reactor");
+    btnReactor?.addEventListener("click", () => this.setCoreVariant("arc_reactor"));
+
+    const btnOrb = document.getElementById("btn-variant-orb");
+    btnOrb?.addEventListener("click", () => this.setCoreVariant("particle_orb"));
   }
 }
 

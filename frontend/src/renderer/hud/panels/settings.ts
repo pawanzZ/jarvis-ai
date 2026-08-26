@@ -228,6 +228,13 @@ export class SettingsPanel {
         <!-- Appearance Tab -->
         <div class="tab-pane" id="tab-appearance">
           <div class="setting-group">
+            <label class="setting-label">Core Visualizer Variant</label>
+            <select class="setting-select" id="cfg-core-variant">
+              <option value="arc_reactor">Iron Man ARC Reactor</option>
+              <option value="particle_orb">Perplexity 3D Particle Orb</option>
+            </select>
+          </div>
+          <div class="setting-group">
             <label class="setting-label">HUD Theme Preset</label>
             <select class="setting-select" id="cfg-hud-theme">
               <option value="arc">Iron Man ARC (Cyan & Gold)</option>
@@ -386,6 +393,14 @@ export class SettingsPanel {
     setupSlider("cfg-particle-density", "val-particle-density", (v) => `${Math.round(v)}`);
     setupSlider("cfg-sfx-vol", "val-sfx-vol", (v) => `${Math.round(v * 100)}%`);
 
+    const variantSelect = this.drawerEl.querySelector("#cfg-core-variant") as HTMLSelectElement;
+    variantSelect?.addEventListener("change", () => {
+      this.collectFormData();
+      if (this.options.onSettingsChange) {
+        this.options.onSettingsChange(this.settings);
+      }
+    });
+
     // Apply & Save button
     const saveBtn = this.drawerEl.querySelector("#save-config-btn") as HTMLButtonElement;
     saveBtn?.addEventListener("click", () => {
@@ -450,6 +465,7 @@ export class SettingsPanel {
     setChecked("cfg-ptt-enabled", this.settings.activation.pttEnabled);
     setChecked("cfg-clap-enabled", this.settings.activation.clapEnabled);
 
+    setVal("cfg-core-variant", this.settings.appearance.coreVariant || "arc_reactor");
     setVal("cfg-hud-theme", this.settings.appearance.theme);
     setVal("cfg-particle-density", this.settings.appearance.particleDensity);
     setChecked("cfg-scanlines", this.settings.appearance.crtScanlines);
@@ -483,6 +499,7 @@ export class SettingsPanel {
     this.settings.activation.pttEnabled = getChecked("cfg-ptt-enabled");
     this.settings.activation.clapEnabled = getChecked("cfg-clap-enabled");
 
+    this.settings.appearance.coreVariant = (getVal("cfg-core-variant") as any) || "arc_reactor";
     this.settings.appearance.theme = (getVal("cfg-hud-theme") as any) || "arc";
     this.settings.appearance.particleDensity = getNum("cfg-particle-density") || 60;
     this.settings.appearance.crtScanlines = getChecked("cfg-scanlines");

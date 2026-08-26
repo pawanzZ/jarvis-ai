@@ -514,6 +514,8 @@ html, body {
 #core-viewport {
   position: relative;
   z-index: 15;
+  width: 440px;
+  height: 440px;
   display: flex;
   align-items: center;
   justify-content: center;

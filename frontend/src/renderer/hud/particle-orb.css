@@ -1,0 +1,92 @@
+/**
+ * Jarvis AI - Particle Orb & Visualizer Variant Styles
+ */
+
+#orb-canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px;
+  height: 380px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+  z-index: 12;
+}
+
+#orb-canvas.active-variant {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#core-container {
+  transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s ease;
+}
+
+#core-container.inactive-variant {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.92);
+}
+
+/* Variant Switcher Pill */
+.core-variant-switch {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 15, 30, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 180, 255, 0.25);
+  border-radius: 16px;
+  padding: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 0 8px rgba(0, 180, 255, 0.1);
+  z-index: 30;
+}
+
+.variant-pill {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 4px 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.variant-pill:hover {
+  color: var(--text-primary);
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.variant-pill.active {
+  background: rgba(0, 212, 255, 0.18);
+  border-color: rgba(0, 212, 255, 0.45);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.35);
+  text-shadow: 0 0 6px var(--accent-cyan);
+}
+
+.variant-hotkey-hint {
+  font-size: 8px;
+  opacity: 0.6;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  padding: 1px 3px;
+  border-radius: 3px;
+}

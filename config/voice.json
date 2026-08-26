@@ -1,7 +1,7 @@
 {
   "stt_plugin": "whisper_local",
   "tts_plugin": "piper_tts",
-  "sttPlugin": "whisper_local",
+  "sttPlugin": "faster_whisper",
   "ttsPlugin": "piper_tts",
   "ttsVoice": "en_GB-alan-medium",
   "ttsRate": 1,

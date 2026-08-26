@@ -322,8 +322,11 @@ export interface ActivationSettings {
   gestureEnabled: boolean;
 }
 
+export type CoreVisualizerVariant = "arc_reactor" | "particle_orb";
+
 export interface AppearanceSettings {
   theme: "arc" | "matrix" | "synthwave" | "stealth";
+  coreVariant: CoreVisualizerVariant;
   particleDensity: number;
   crtScanlines: boolean;
   glowIntensity: number;
@@ -382,6 +385,7 @@ export const DEFAULT_SETTINGS: SettingsConfig = {
   },
   appearance: {
     theme: "arc",
+    coreVariant: "arc_reactor",
     particleDensity: 60,
     crtScanlines: true,
     glowIntensity: 1.0,

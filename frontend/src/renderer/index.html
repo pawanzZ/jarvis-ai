@@ -6,6 +6,7 @@
   <title>Jarvis AI - Iron Man HUD</title>
   <link rel="stylesheet" href="hud/layout.css">
   <link rel="stylesheet" href="hud/arc-reactor.css">
+  <link rel="stylesheet" href="hud/particle-orb.css">
   <link rel="stylesheet" href="hud/panels/settings.css">
 </head>
 <body>
@@ -151,6 +152,16 @@
         <div class="hud-reticle"></div>
         <div id="core-viewport">
           <div id="core-container"></div>
+          <canvas id="orb-canvas" width="380" height="380"></canvas>
+          <div class="core-variant-switch" title="Toggle Core Visualizer Variant [V]">
+            <button class="variant-pill active" id="btn-variant-reactor" title="Iron Man ARC Reactor">
+              <span>ARC REACTOR</span>
+            </button>
+            <button class="variant-pill" id="btn-variant-orb" title="Perplexity 3D Particle Orb">
+              <span>PERPLEXITY ORB</span>
+            </button>
+            <span class="variant-hotkey-hint">[V]</span>
+          </div>
         </div>
       </section>
 
@@ -291,6 +302,10 @@
   <script>window.__loadModule('system-monitor', function() {});</script>
   <script src="hud/system-monitor.js"></script>
   <script>window.__exportsMap['system-monitor'] = window.exports;</script>
+
+  <script>window.__loadModule('particle-orb', function() {});</script>
+  <script src="hud/particle-orb.js"></script>
+  <script>window.__exportsMap['particle-orb'] = window.exports;</script>
 
   <script>window.__loadModule('app', function() {});</script>
   <script src="core/app.js"></script>
