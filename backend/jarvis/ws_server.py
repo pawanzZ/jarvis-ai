@@ -274,6 +274,22 @@ class WSServer:
                 "data": {"enabled": enabled},
                 "enabled": enabled,
             })
+        elif msg_type == "test_attention":
+            attention = bool(msg.get("attention", True))
+            telemetry_data = {
+                "detected": True,
+                "attention": attention,
+                "head_pose": {"yaw": 0.0 if attention else 32.0, "pitch": 0.0 if attention else -14.0, "roll": 0.0},
+                "pose": {"yaw": 0.0 if attention else 32.0, "pitch": 0.0 if attention else -14.0, "roll": 0.0},
+                "gaze": [0.5, 0.5] if attention else [0.15, 0.85],
+                "face_detected": True,
+            }
+            await self.bus.emit(Event(type="face_data", data=telemetry_data, source="test"))
+            await self.broadcast({
+                "type": "face_data",
+                "data": telemetry_data,
+                **telemetry_data,
+            })
 
     async def broadcast(self, data: dict[str, Any]) -> None:
         message = json.dumps(data)

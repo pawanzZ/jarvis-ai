@@ -7,22 +7,26 @@
 #settings-drawer {
   position: fixed;
   top: 0;
-  right: -520px;
-  width: 480px;
+  right: -540px;
+  width: 500px;
+  max-width: 95vw;
   height: 100vh;
-  background: rgba(8, 14, 28, 0.94);
+  box-sizing: border-box;
+  background: rgba(8, 14, 28, 0.96);
   border-left: 1px solid var(--accent-cyan);
-  box-shadow: -8px 0 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 212, 255, 0.25);
+  box-shadow: -8px 0 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 212, 255, 0.25);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(--font-hud);
+  overflow-x: hidden;
 }
 
 #settings-drawer.open {
-  right: 0;
+  right: 0 !important;
 }
 
 /* Backdrop Dimmer */
@@ -92,13 +96,21 @@
 .settings-tabs {
   display: flex;
   overflow-x: auto;
-  background: rgba(6, 12, 24, 0.7);
-  border-bottom: 1px solid rgba(0, 180, 255, 0.15);
-  padding: 0 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-cyan) rgba(6, 12, 24, 0.7);
+  background: rgba(6, 12, 24, 0.85);
+  border-bottom: 1px solid rgba(0, 180, 255, 0.2);
+  padding: 0 4px;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .settings-tabs::-webkit-scrollbar {
-  height: 2px;
+  height: 3px;
+}
+.settings-tabs::-webkit-scrollbar-thumb {
+  background: var(--accent-cyan);
+  border-radius: 2px;
 }
 
 .tab-btn {
@@ -106,24 +118,27 @@
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-secondary);
-  padding: 12px 14px;
+  padding: 10px 8px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
 .tab-btn:hover {
   color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.05);
 }
 
 .tab-btn.active {
   color: var(--accent-cyan);
   border-bottom-color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.08);
+  background: rgba(0, 212, 255, 0.12);
+  font-weight: 700;
 }
 
 /* Settings Body & Tab Content */

@@ -479,6 +479,9 @@ export class JarvisApp {
       const gazeEl = document.getElementById("telem-gaze");
       if (gazeEl) gazeEl.textContent = `[${gaze[0].toFixed(2)}, ${gaze[1].toFixed(2)}]`;
     }
+
+    // Forward to Settings Panel live telemetry card
+    this.settingsPanel.updateVisionTelemetry(msg.data || msg);
   }
 
   private updatePluginListUI(): void {
@@ -507,6 +510,17 @@ export class JarvisApp {
     const crtEl = document.querySelector(".crt-overlay") as HTMLElement;
     if (crtEl) {
       crtEl.style.display = settings.appearance.crtScanlines ? "block" : "none";
+    }
+
+    // Vision / Face Tracking update
+    if (settings.vision?.faceTrackingEnabled === false) {
+      this.statusBar.setAttention(false, false);
+      const pitchEl = document.getElementById("telem-pitch");
+      const yawEl = document.getElementById("telem-yaw");
+      const rollEl = document.getElementById("telem-roll");
+      if (pitchEl) pitchEl.textContent = "OFF";
+      if (yawEl) yawEl.textContent = "OFF";
+      if (rollEl) rollEl.textContent = "OFF";
     }
   }
 

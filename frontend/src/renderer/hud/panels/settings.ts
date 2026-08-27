@@ -100,6 +100,38 @@ export class SettingsPanel {
     }
   }
 
+  public updateVisionTelemetry(data: any): void {
+    const statusEl = this.drawerEl.querySelector("#vision-diag-status");
+    const attnEl = this.drawerEl.querySelector("#vision-diag-attention");
+    const poseEl = this.drawerEl.querySelector("#vision-diag-pose");
+    const gazeEl = this.drawerEl.querySelector("#vision-diag-gaze");
+
+    const detected = data.detected ?? data.face_detected ?? true;
+    const attention = data.attention ?? detected;
+    const pose = data.head_pose || data.pose;
+    const gaze = data.gaze;
+
+    if (statusEl) {
+      statusEl.textContent = detected ? "ONLINE // ACTIVE" : "STANDBY // NO FACE";
+      (statusEl as HTMLElement).style.color = detected ? "var(--accent-green)" : "var(--accent-gold)";
+    }
+    if (attnEl) {
+      attnEl.textContent = attention ? "ENGAGED (LOOKING AT HUD)" : "DISTRACTED (LOOKING AWAY)";
+      (attnEl as HTMLElement).style.color = attention ? "var(--accent-cyan)" : "var(--accent-gold)";
+    }
+    if (poseEl && pose) {
+      const p = typeof pose.pitch === "number" ? pose.pitch.toFixed(1) : "0.0";
+      const y = typeof pose.yaw === "number" ? pose.yaw.toFixed(1) : "0.0";
+      const r = typeof pose.roll === "number" ? pose.roll.toFixed(1) : "0.0";
+      poseEl.textContent = `P: ${p}°  Y: ${y}°  R: ${r}°`;
+    }
+    if (gazeEl && gaze && Array.isArray(gaze)) {
+      const gx = typeof gaze[0] === "number" ? gaze[0].toFixed(2) : "0.50";
+      const gy = typeof gaze[1] === "number" ? gaze[1].toFixed(2) : "0.50";
+      gazeEl.textContent = `[${gx}, ${gy}]`;
+    }
+  }
+
   private render(): void {
     this.drawerEl.innerHTML = `
       <div class="settings-header">
@@ -120,7 +152,7 @@ export class SettingsPanel {
         <button class="tab-btn" data-tab="appearance">Appearance</button>
         <button class="tab-btn" data-tab="vision">Vision</button>
         <button class="tab-btn" data-tab="sfx">SFX</button>
-        <button class="tab-btn" data-tab="dev">Dev Controls</button>
+        <button class="tab-btn" data-tab="dev">Dev</button>
       </div>
 
       <div class="settings-body">
@@ -280,6 +312,42 @@ export class SettingsPanel {
             <label class="setting-label">Camera Device Index</label>
             <input type="number" min="0" max="10" class="setting-input" id="cfg-camera-idx" value="0" />
           </div>
+
+          <!-- Live Vision Telemetry & Attention Testing Card -->
+          <div class="setting-group" style="background: rgba(0, 212, 255, 0.04); border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 6px; padding: 14px; margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan); font-weight: 700; letter-spacing: 1px;">LIVE BIOMETRIC TELEMETRY</span>
+              <span id="vision-diag-status" style="font-family: var(--font-mono); font-size: 9px; color: var(--accent-green); letter-spacing: 1px;">ONLINE // ACTIVE</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary);">
+              <div style="display: flex; justify-content: space-between;">
+                <span>USER ATTENTION:</span>
+                <span id="vision-diag-attention" style="color: var(--accent-cyan); font-weight: 700;">ENGAGED (LOOKING AT HUD)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>HEAD POSE:</span>
+                <span id="vision-diag-pose" style="color: #ffffff;">P: 0.0°  Y: 0.0°  R: 0.0°</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>GAZE RETICLE:</span>
+                <span id="vision-diag-gaze" style="color: var(--accent-cyan);">[0.50, 0.50]</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+              <button class="dev-action-btn" id="btn-test-attention" style="width: 100%; border-color: rgba(0, 212, 255, 0.4); color: var(--accent-cyan);">
+                ⚡ TEST ATTENTION SHIFT (TOGGLE ENGAGED / DISTRACTED)
+              </button>
+              <button class="dev-action-btn" id="btn-launch-vision" style="width: 100%; border-color: rgba(0, 245, 212, 0.5); color: var(--accent-green, #00f5d4);">
+                👁 LAUNCH VISION MODE (CENTER STAGE)
+              </button>
+            </div>
+
+            <div style="margin-top: 10px; font-size: 9px; color: var(--text-muted); line-height: 1.4;">
+              Tracks your face presence, head orientation angles, and gaze direction. If looking away from the HUD, attention shifts to DISTRACTED. Press [O] anytime to bring the optical targeting feed to center stage.
+            </div>
+          </div>
         </div>
 
         <!-- SFX Tab -->
@@ -437,6 +505,29 @@ export class SettingsPanel {
     const pingBtn = this.drawerEl.querySelector("#dev-ping-btn");
     pingBtn?.addEventListener("click", () => {
       this.ws.send({ type: "ping", data: { timestamp: Date.now() } });
+    });
+
+    // Vision Live Testing Listeners
+    const testAttnBtn = this.drawerEl.querySelector("#btn-test-attention");
+    let testAttentionState = true;
+    testAttnBtn?.addEventListener("click", () => {
+      testAttentionState = !testAttentionState;
+      this.ws.send({
+        type: "test_attention",
+        attention: testAttentionState,
+      });
+      const lbl = this.drawerEl.querySelector("#vision-diag-attention");
+      if (lbl) {
+        lbl.textContent = testAttentionState ? "ENGAGED (LOOKING AT HUD)" : "DISTRACTED (LOOKING AWAY)";
+        (lbl as HTMLElement).style.color = testAttentionState ? "var(--accent-cyan)" : "var(--accent-gold)";
+      }
+    });
+
+    const launchVisionBtn = this.drawerEl.querySelector("#btn-launch-vision");
+    launchVisionBtn?.addEventListener("click", () => {
+      this.close();
+      const toggleVisionBtn = document.getElementById("btn-toggle-vision-mode");
+      toggleVisionBtn?.click();
     });
   }
 

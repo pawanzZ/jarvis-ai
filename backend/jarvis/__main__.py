@@ -429,6 +429,32 @@ async def main() -> None:
                 print(f"[Jarvis] Airspace worker error: {e}")
                 await asyncio.sleep(30)
 
+    async def vision_worker() -> None:
+        face = plugin_mgr.get_plugin("face_tracker")
+        while True:
+            try:
+                vision_cfg = config.get("vision", {})
+                is_enabled = vision_cfg.get("face_tracking", True) if isinstance(vision_cfg, dict) else True
+                if face is not None and getattr(face, "_running", False) and is_enabled:
+                    ev = await face.on_event(Event(type="vision_tick"))
+                    if ev and ev.data:
+                        await server.broadcast({
+                            "type": "face_data",
+                            "data": ev.data,
+                            "detected": ev.data.get("detected", True),
+                            "attention": ev.data.get("attention", True),
+                            "head_pose": ev.data.get("head_pose", {}),
+                            "pose": ev.data.get("head_pose", {}),
+                            "gaze": ev.data.get("gaze", [0.5, 0.5]),
+                            "face_detected": ev.data.get("detected", True),
+                        })
+                await asyncio.sleep(0.1)  # 10 Hz telemetry tick
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[Jarvis] Vision worker error: {e}")
+                await asyncio.sleep(1.0)
+
     print("Jarvis backend starting...")
 
     # Spawn background tasks
@@ -437,6 +463,7 @@ async def main() -> None:
     telemetry_task = asyncio.create_task(telemetry_worker())
     weather_task = asyncio.create_task(weather_worker())
     airspace_task = asyncio.create_task(airspace_worker())
+    vision_task = asyncio.create_task(vision_worker())
 
     try:
         await server.start()
@@ -446,6 +473,7 @@ async def main() -> None:
         telemetry_task.cancel()
         weather_task.cancel()
         airspace_task.cancel()
+        vision_task.cancel()
         await mic.stop()
         speaker.stop()
         await plugin_mgr.stop_all()

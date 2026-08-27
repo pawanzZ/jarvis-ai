@@ -9,14 +9,15 @@
 ## ⚡ Key Features
 
 - **Voice-First Interaction & Multi-Modal Activation**:
-  - **Wired real audio pipeline** — actual microphone streaming (SoundDevice) with noise-adaptive VAD (noise-floor tracking, hangover windows, pre-buffering to avoid utterance clipping), live Whisper STT, and neural TTS playback.
+  - **Wired real audio pipeline** — actual microphone streaming (SoundDevice) with noise-adaptive VAD (noise-floor tracking, hangover windows, pre-buffering to avoid utterance clipping), live Whisper STT, and sentence-synced streaming neural TTS so speech tracks the transcript.
   - Hands-free Voice Activity Detection (VAD).
   - Push-to-Talk (PTT) with configurable keybinds and hold/toggle modes.
-  - Double-clap acoustic pattern detector for hands-free activation.
+  - Double-clap acoustic pattern detector for hands-free activation (sensitivity configurable, default `0.82`), plus burst-confirmed single-sound fallback.
+  - **Natural conversational flow**: barge-in while thinking, audio synced to the transcript, and a voice-detection hold that stays listening after each reply.
   - ALSA mic gain normalization and automatic Ollama model detection.
 - **Pluggable Local-First AI Backends**:
   - **STT**: Whisper local inference (`faster-whisper` / `whisper.cpp`) with streaming partial transcripts and offline fallback.
-  - **TTS**: Piper neural speech synthesis (`piper-tts` / `speech-dispatcher`) with live audio streaming.
+  - **TTS**: Piper neural speech synthesis (`piper-tts` / `speech-dispatcher`) with FIFO streaming speech queue and interrupt support, so sentences are spoken as the LLM streams them.
   - **LLM**: Ollama local large language models (`llama3` / `mistral` / `phi3`) with real-time token streaming.
   - **Vision**: MediaPipe Face Mesh for head pose estimation, gaze tracking, and attention telemetry.
 - **Iron Man Holographic HUD (Electron + TypeScript)**:
@@ -125,6 +126,15 @@ The core backend revolves around an asynchronous publish-subscribe `EventBus` an
   - `error`: Transient fault state with automatic recovery to `idle`.
 
 State changes are automatically broadcast over the WebSocket gateway to all connected HUD clients.
+
+#### 1a. Conversational Turn Flow (`__main__.py`)
+A single voice-driven turn flows through the audio worker and speech handler:
+
+- **IDLE → LISTENING (activation)**: Two hands-free triggers with **burst confirmation** so ordinary room noise can't trip them — the acoustic **double-clap detector** (live-wired into the energy stream) and a confirmed single-sound fallback that requires two consecutive loud frames (floor `0.07`, `3.5×` the ambient noise floor).
+- **Listening (VAD)**: The noise floor is adaptively tracked (`ambient_energy = 0.96·ambient + 0.04·energy`). A chunk counts as "voiced" only above `max(0.02, 2.0× ambient)`; ~0.5s of trailing silence closes the utterance (pre-buffered so the start isn't clipped), with an 8-second max-turn safety cap.
+- **THINKING → SPEAKING → LISTENING**: LLM tokens are streamed to the HUD `llm_token` event and **spoken as each sentence completes** via a FIFO speech queue, so the audio stays in sync with the live transcript.
+- **Barge-in**: While Jarvis is **thinking** the mic stays open (it isn't producing sound), so you can interrupt with a burst-confirmed voice (`2×` consecutive frames, floor `0.08`, `4.5×` ambient). While **speaking** the mic is deliberately closed on speakers so Jarvis never hears and interrupts its own voice (this eliminated an abrupt self-interrupt loop).
+- **Voice-detection hold**: After each reply Jarvis returns to **LISTENING** and holds for a 10-second idle timeout before settling back to IDLE, letting you keep talking in a natural back-and-forth.
 
 ### 2. Plugin Architecture & Manager
 Jarvis uses an extensible, modular plugin system. Plugins inherit from `jarvis.plugins.base.Plugin` and implement lifecycle hooks:
@@ -246,7 +256,7 @@ config/
 │   ├── piper_tts.json      # Piper TTS voice, rate & sample rate
 │   ├── ollama_llm.json     # Ollama model name & endpoint URL
 │   ├── push_to_talk.json   # Keybind and mode (hold/toggle)
-│   ├── clap_detector.json  # Audio peak threshold & window
+│   ├── clap_detector.json  # Audio peak threshold (default 0.82) & window
 │   └── face_tracker.json   # Camera index & confidence threshold
 └── themes/
     ├── arc-reactor.json    # HUD color palette & ring speeds
