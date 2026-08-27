@@ -107,28 +107,44 @@ export class JarvisApp {
     if (globeCanvas) this.spinningGlobe = new SpinningGlobe(globeCanvas);
 
     // 5. Initialize Center Corner Pods (Tony Stark Battle-Station)
-    const ironmanCanvas = document.getElementById("ironman-3d-canvas") as HTMLCanvasElement;
-    if (ironmanCanvas) {
-      this.ironman3D = new IronMan3DModelHUD(ironmanCanvas);
+    try {
+      const ironmanCanvas = document.getElementById("ironman-3d-canvas") as HTMLCanvasElement;
+      if (ironmanCanvas) {
+        this.ironman3D = new IronMan3DModelHUD(ironmanCanvas);
+      }
+
+      const toggleArmorBtn = document.getElementById("btn-toggle-armor-view");
+      if (toggleArmorBtn && this.ironman3D) {
+        toggleArmorBtn.addEventListener("click", () => {
+          const newMode = this.ironman3D?.toggleViewMode();
+          toggleArmorBtn.textContent = newMode === "helmet" ? "HELMET" : "ARMOR";
+        });
+      }
+    } catch (err) {
+      console.error("[JarvisApp] Failed to initialize IronMan3DModelHUD:", err);
     }
 
-    const toggleArmorBtn = document.getElementById("btn-toggle-armor-view");
-    if (toggleArmorBtn && this.ironman3D) {
-      toggleArmorBtn.addEventListener("click", () => {
-        const newMode = this.ironman3D?.toggleViewMode();
-        toggleArmorBtn.textContent = newMode === "helmet" ? "HELMET" : "ARMOR";
-      });
+    try {
+      const cameraVideo = document.getElementById("hud-camera-video") as HTMLVideoElement;
+      const cameraCanvas = document.getElementById("camera-hud-canvas") as HTMLCanvasElement;
+      if (cameraVideo && cameraCanvas) this.cameraHud = new CameraHUD(cameraVideo, cameraCanvas);
+    } catch (err) {
+      console.error("[JarvisApp] Failed to initialize CameraHUD:", err);
     }
 
-    const cameraVideo = document.getElementById("hud-camera-video") as HTMLVideoElement;
-    const cameraCanvas = document.getElementById("camera-hud-canvas") as HTMLCanvasElement;
-    if (cameraVideo && cameraCanvas) this.cameraHud = new CameraHUD(cameraVideo, cameraCanvas);
+    try {
+      const scriptContainer = document.querySelector(".hud-corner-pod.pod-bottom-left") as HTMLElement;
+      if (scriptContainer) this.scriptRunner = new ScriptRunnerHUD(scriptContainer);
+    } catch (err) {
+      console.error("[JarvisApp] Failed to initialize ScriptRunnerHUD:", err);
+    }
 
-    const scriptContainer = document.querySelector(".hud-corner-pod.pod-bottom-left") as HTMLElement;
-    if (scriptContainer) this.scriptRunner = new ScriptRunnerHUD(scriptContainer);
-
-    const flightCanvas = document.getElementById("flight-tracker-canvas") as HTMLCanvasElement;
-    if (flightCanvas) this.flightTracker = new FlightTrackerHUD(flightCanvas);
+    try {
+      const flightCanvas = document.getElementById("flight-tracker-canvas") as HTMLCanvasElement;
+      if (flightCanvas) this.flightTracker = new FlightTrackerHUD(flightCanvas);
+    } catch (err) {
+      console.error("[JarvisApp] Failed to initialize FlightTrackerHUD:", err);
+    }
 
     // 6. Initialize Status & Transcript bars
     const statusBarEl = document.getElementById("status-bar");

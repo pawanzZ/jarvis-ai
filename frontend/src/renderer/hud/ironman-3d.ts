@@ -66,9 +66,16 @@ export class IronMan3DModelHUD {
     if (!context) throw new Error("Could not get 2D context for IronMan3DModelHUD");
     this.ctx = context;
 
-    // Compile Path2D objects from authentic SVG blueprint data
-    this.helmetPath = new Path2D(HELMET_SVG_PATH);
-    this.suitPath = new Path2D(SUIT_SVG_PATH);
+    // Compile Path2D objects from authentic SVG blueprint data with safe fallbacks
+    const hSvg = (typeof HELMET_SVG_PATH === "string" && HELMET_SVG_PATH.length > 10)
+      ? HELMET_SVG_PATH
+      : "M 287 300 L 250 400 L 320 400 Z";
+    const sSvg = (typeof SUIT_SVG_PATH === "string" && SUIT_SVG_PATH.length > 10)
+      ? SUIT_SVG_PATH
+      : "M 288 300 L 250 500 L 320 500 Z";
+
+    this.helmetPath = new Path2D(hSvg);
+    this.suitPath = new Path2D(sSvg);
 
     this.setupInteractions();
     this.resize();
@@ -242,10 +249,11 @@ export class IronMan3DModelHUD {
     this.renderBlueprintGrid(width, height, cx, cy);
 
     // 2. Setup 3D Projection Matrix
-    const origCenter = this.viewMode === "helmet" ? HELMET_ORIG_CENTER : SUIT_ORIG_CENTER;
+    const defaultCenter = { x: 288, y: 500, width: 500, height: 700 };
+    const origCenter = (this.viewMode === "helmet" ? HELMET_ORIG_CENTER : SUIT_ORIG_CENTER) || defaultCenter;
     const baseScale = this.viewMode === "helmet"
-      ? (height * 0.78) / origCenter.height
-      : (height * 0.88) / origCenter.height;
+      ? (height * 0.78) / (origCenter.height || 683)
+      : (height * 0.88) / (origCenter.height || 1013);
     const scale = baseScale * this.zoom;
 
     const cosY = Math.cos(this.yaw);
