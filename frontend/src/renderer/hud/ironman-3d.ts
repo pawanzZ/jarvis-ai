@@ -1,43 +1,27 @@
 /**
- * Jarvis AI - Interactive 3D Holographic Iron Man Model
- * Fully rotatable, zoomable 3D wireframe & holographic armor visualizer.
- * Supports:
- * - Direct mouse/touch drag orbit (360° yaw & pitch with inertial momentum)
- * - Mouse wheel zoom (0.6x to 2.4x) & double-click view reset
+ * Jarvis AI - Realistic 3D Interactive Iron Man Holographic Blueprint
+ * Renders authentic vector line-art and architectural blueprints from reference images:
+ * - Reference 1: Mark 85 Helmet Blueprint (HELMET_SVG_PATH)
+ * - Reference 2: Full Mark VII / 85 Suit Architectural Schematic (SUIT_SVG_PATH)
+ *
+ * Features:
+ * - Full 3D perspective orbit (yaw, pitch, roll) with pointer drag and inertia
+ * - Smooth mouse-wheel zoom (0.5x to 3.0x) and double-click view reset
  * - Auto-orbit turntable rotation when idle
- * - Dual view modes: HELMET (Reference 1) & FULL SUIT BLUEPRINT (Reference 2)
- * - Dynamic glowing eye slits and chest Arc Reactor pulsing with Jarvis state and vocal audio
- * - Holographic leader lines and armor diagnostics
+ * - Path2D vector fill and glowing neon blueprint stroke
+ * - Realistic ocular lens optics (eyes) pulsing to vocal audio levels and Jarvis states
+ * - Center Chest Arc Reactor Core with rotating flux rings
+ * - Holographic laser sweep beam traversing armor plates
+ * - Engineering caliper ticks, grid lines, and diagnostic leader callouts
  */
 
 import { JarvisState } from "../core/types";
-
-interface Point3D {
-  x: number;
-  y: number;
-  z: number;
-}
-
-interface Edge3D {
-  p1: number;
-  p2: number;
-  color?: string;
-  width?: number;
-}
-
-interface Polygon3D {
-  indices: number[];
-  fill?: string;
-  stroke?: string;
-  glow?: boolean;
-}
-
-interface DiagnosticCallout {
-  anchorIdx: number;
-  label: string;
-  sub: string;
-  dir: "left" | "right";
-}
+import {
+  HELMET_SVG_PATH,
+  HELMET_ORIG_CENTER,
+  SUIT_SVG_PATH,
+  SUIT_ORIG_CENTER,
+} from "./ironman-svg-data";
 
 export type IronManViewMode = "helmet" | "suit";
 
@@ -50,34 +34,31 @@ export class IronMan3DModelHUD {
   private audioLevel = 0;
   private viewMode: IronManViewMode = "helmet";
 
-  // Camera & Interaction
-  private yaw = 0.25;          // Horizontal rotation
-  private pitch = -0.08;       // Vertical tilt
-  private zoom = 1.0;          // Zoom scale
-  private yawVel = 0;
-  private pitchVel = 0;
+  // Pre-compiled Path2D objects
+  private helmetPath: Path2D;
+  private suitPath: Path2D;
+
+  // 3D Camera & Interaction
+  private yaw = 0.0;
+  private pitch = 0.0;
+  private zoom = 1.0;
+  private yawVel = 0.0;
+  private pitchVel = 0.0;
   private isDragging = false;
   private lastMouseX = 0;
   private lastMouseY = 0;
   private lastInteractionTime = 0;
-  private targetYaw = 0;
-  private targetPitch = 0;
+
+  // View reset animation
+  private targetYaw = 0.0;
+  private targetPitch = 0.0;
   private targetZoom = 1.0;
   private isResetting = false;
 
-  // Geometry: Helmet
-  private helmetVertices: Point3D[] = [];
-  private helmetEdges: Edge3D[] = [];
-  private helmetPolygons: Polygon3D[] = [];
-  private helmetEyeLeft: number[] = [];
-  private helmetEyeRight: number[] = [];
-
-  // Geometry: Full Suit
-  private suitVertices: Point3D[] = [];
-  private suitEdges: Edge3D[] = [];
-  private suitPolygons: Polygon3D[] = [];
-  private suitCallouts: DiagnosticCallout[] = [];
-  private chestReactorCenterIdx = 0;
+  // Animation clocks
+  private scanY = 0.0;
+  private arcAngle = 0.0;
+  private time = 0.0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -85,10 +66,11 @@ export class IronMan3DModelHUD {
     if (!context) throw new Error("Could not get 2D context for IronMan3DModelHUD");
     this.ctx = context;
 
-    this.buildHelmetGeometry();
-    this.buildSuitGeometry();
-    this.setupInteractions();
+    // Compile Path2D objects from authentic SVG blueprint data
+    this.helmetPath = new Path2D(HELMET_SVG_PATH);
+    this.suitPath = new Path2D(SUIT_SVG_PATH);
 
+    this.setupInteractions();
     this.resize();
     window.addEventListener("resize", this.handleResize);
     this.start();
@@ -119,268 +101,20 @@ export class IronMan3DModelHUD {
 
   public resetView(): void {
     this.targetYaw = 0.0;
-    this.targetPitch = -0.05;
+    this.targetPitch = 0.0;
     this.targetZoom = 1.0;
     this.isResetting = true;
-  }
-
-  /**
-   * Builds high-fidelity 3D Iron Man Helmet geometry from Reference 1 (media_1787834180861.png)
-   */
-  private buildHelmetGeometry(): void {
-    const v: Point3D[] = [];
-    const e: Edge3D[] = [];
-    const poly: Polygon3D[] = [];
-
-    const addV = (x: number, y: number, z: number): number => {
-      v.push({ x, y, z });
-      return v.length - 1;
-    };
-
-    const addEdge = (p1: number, p2: number, color?: string, width?: number) => {
-      e.push({ p1, p2, color, width });
-    };
-
-    // --- Cranium & Forehead ---
-    const topCrown = addV(0, -68, 8);
-    const topCrownL = addV(-22, -64, 4);
-    const topCrownR = addV(22, -64, 4);
-    const templeL = addV(-38, -48, -4);
-    const templeR = addV(38, -48, -4);
-
-    // Trapezoid Forehead Inset Plate
-    const fhTL = addV(-12, -60, 16);
-    const fhTR = addV(12, -60, 16);
-    const fhBL = addV(-8, -42, 22);
-    const fhBR = addV(8, -42, 22);
-
-    // Brow Ridge (Prominent chamfered ridge)
-    const browCenter = addV(0, -32, 28);
-    const browMidL = addV(-18, -31, 26);
-    const browMidR = addV(18, -31, 26);
-    const browOuterL = addV(-36, -30, 16);
-    const browOuterR = addV(36, -30, 16);
-
-    // Left Eye Slit (Angular polygon)
-    const eL1 = addV(-12, -26, 26);
-    const eL2 = addV(-32, -24, 18);
-    const eL3 = addV(-30, -21, 19);
-    const eL4 = addV(-12, -23, 26);
-    this.helmetEyeLeft = [eL1, eL2, eL3, eL4];
-
-    // Right Eye Slit (Angular polygon)
-    const eR1 = addV(12, -26, 26);
-    const eR2 = addV(32, -24, 18);
-    const eR3 = addV(30, -21, 19);
-    const eR4 = addV(12, -23, 26);
-    this.helmetEyeRight = [eR1, eR2, eR3, eR4];
-
-    // Nose bridge & Faceplate Upper Center
-    const noseBridge = addV(0, -20, 29);
-    const noseLower = addV(0, -8, 28);
-
-    // Cheekbone Chamfers
-    const cheekTopL = addV(-36, -18, 16);
-    const cheekTopR = addV(36, -18, 16);
-    const cheekMidL = addV(-28, 4, 20);
-    const cheekMidR = addV(28, 4, 20);
-
-    // Faceplate Lower Taper / Mouth Slit
-    const mouthTL = addV(-14, 16, 24);
-    const mouthTR = addV(14, 16, 24);
-    const mouthBL = addV(-12, 22, 23);
-    const mouthBR = addV(12, 22, 23);
-
-    // Chin Plate (Chamfered trapezoid base)
-    const chinTL = addV(-10, 32, 22);
-    const chinTR = addV(10, 32, 22);
-    const chinBL = addV(-7, 44, 16);
-    const chinBR = addV(7, 44, 16);
-    const chinBase = addV(0, 48, 14);
-
-    // Jawline & Ear Pods
-    const jawAngleL = addV(-32, 24, 6);
-    const jawAngleR = addV(32, 24, 6);
-    const earTopL = addV(-42, -18, -4);
-    const earTopR = addV(42, -18, -4);
-    const earBotL = addV(-42, 6, -6);
-    const earBotR = addV(42, 6, -6);
-
-    // Back / Crown Base (Depth contour)
-    const skullBack = addV(0, -35, -34);
-    const occipitalL = addV(-28, -10, -28);
-    const occipitalR = addV(28, -10, -28);
-
-    // --- Edges Connection ---
-    // Dome contours
-    addEdge(topCrown, topCrownL); addEdge(topCrown, topCrownR);
-    addEdge(topCrownL, templeL); addEdge(topCrownR, templeR);
-    addEdge(templeL, browOuterL); addEdge(templeR, browOuterR);
-    addEdge(topCrown, skullBack); addEdge(skullBack, occipitalL); addEdge(skullBack, occipitalR);
-
-    // Forehead Plate
-    addEdge(fhTL, fhTR); addEdge(fhTR, fhBR); addEdge(fhBR, fhBL); addEdge(fhBL, fhTL);
-    addEdge(topCrown, fhTL); addEdge(topCrown, fhTR);
-    addEdge(fhBL, browMidL); addEdge(fhBR, browMidR);
-
-    // Brow Line
-    addEdge(browOuterL, browMidL); addEdge(browMidL, browCenter);
-    addEdge(browCenter, browMidR); addEdge(browMidR, browOuterR);
-
-    // Left Eye Ring
-    addEdge(eL1, eL2); addEdge(eL2, eL3); addEdge(eL3, eL4); addEdge(eL4, eL1);
-    // Right Eye Ring
-    addEdge(eR1, eR2); addEdge(eR2, eR3); addEdge(eR3, eR4); addEdge(eR4, eR1);
-
-    // Nose & Faceplate Center
-    addEdge(browCenter, noseBridge); addEdge(noseBridge, noseLower);
-    addEdge(eL4, noseBridge); addEdge(eR4, noseBridge);
-    addEdge(noseLower, mouthTL); addEdge(noseLower, mouthTR);
-
-    // Cheeks
-    addEdge(browOuterL, cheekTopL); addEdge(browOuterR, cheekTopR);
-    addEdge(eL3, cheekTopL); addEdge(eR3, cheekTopR);
-    addEdge(cheekTopL, cheekMidL); addEdge(cheekTopR, cheekMidR);
-    addEdge(cheekMidL, mouthTL); addEdge(cheekMidR, mouthTR);
-
-    // Mouth
-    addEdge(mouthTL, mouthTR); addEdge(mouthTR, mouthBR);
-    addEdge(mouthBR, mouthBL); addEdge(mouthBL, mouthTL);
-
-    // Chin Plate
-    addEdge(mouthBL, chinTL); addEdge(mouthBR, chinTR);
-    addEdge(chinTL, chinTR); addEdge(chinTR, chinBR);
-    addEdge(chinBR, chinBase); addEdge(chinBase, chinBL); addEdge(chinBL, chinTL);
-
-    // Jawline & Ears
-    addEdge(cheekTopL, earTopL); addEdge(earTopL, earBotL); addEdge(earBotL, jawAngleL);
-    addEdge(cheekTopR, earTopR); addEdge(earTopR, earBotR); addEdge(earBotR, jawAngleR);
-    addEdge(cheekMidL, jawAngleL); addEdge(cheekMidR, jawAngleR);
-    addEdge(jawAngleL, chinBL); addEdge(jawAngleR, chinBR);
-
-    this.helmetVertices = v;
-    this.helmetEdges = e;
-  }
-
-  /**
-   * Builds 3D Full Suit Architecture from Reference 2 (media_1787834207642.png)
-   */
-  private buildSuitGeometry(): void {
-    const v: Point3D[] = [];
-    const e: Edge3D[] = [];
-
-    const addV = (x: number, y: number, z: number): number => {
-      v.push({ x, y, z });
-      return v.length - 1;
-    };
-
-    const addEdge = (p1: number, p2: number, color?: string, width?: number) => {
-      e.push({ p1, p2, color, width });
-    };
-
-    // Head
-    const headTop = addV(0, -78, 4);
-    const headJaw = addV(0, -62, 8);
-    const headL = addV(-9, -70, 4);
-    const headR = addV(9, -70, 4);
-    addEdge(headTop, headL); addEdge(headL, headJaw); addEdge(headJaw, headR); addEdge(headR, headTop);
-
-    // Neck
-    const neckBase = addV(0, -56, 6);
-    addEdge(headJaw, neckBase);
-
-    // Shoulders & Pauldrons
-    const shL = addV(-34, -50, 4);
-    const shR = addV(34, -50, 4);
-    const clavL = addV(-16, -52, 10);
-    const clavR = addV(16, -52, 10);
-    addEdge(neckBase, clavL); addEdge(neckBase, clavR);
-    addEdge(clavL, shL); addEdge(clavR, shR);
-
-    // Chestplate
-    const chestCenter = addV(0, -38, 14);
-    this.chestReactorCenterIdx = chestCenter;
-    const pecTL = addV(-14, -44, 12);
-    const pecTR = addV(14, -44, 12);
-    const pecBL = addV(-18, -32, 12);
-    const pecBR = addV(18, -32, 12);
-
-    addEdge(clavL, pecTL); addEdge(clavR, pecTR);
-    addEdge(pecTL, chestCenter); addEdge(pecTR, chestCenter);
-    addEdge(pecTL, pecBL); addEdge(pecTR, pecBR);
-    addEdge(pecBL, chestCenter); addEdge(pecBR, chestCenter);
-
-    // Ribs & Abdomen
-    const ab1L = addV(-14, -22, 10);
-    const ab1R = addV(14, -22, 10);
-    const ab2L = addV(-11, -12, 9);
-    const ab2R = addV(11, -12, 9);
-    const waistL = addV(-13, -2, 8);
-    const waistR = addV(13, -2, 8);
-
-    addEdge(pecBL, ab1L); addEdge(pecBR, ab1R);
-    addEdge(chestCenter, ab1L); addEdge(chestCenter, ab1R);
-    addEdge(ab1L, ab1R); addEdge(ab1L, ab2L); addEdge(ab1R, ab2R);
-    addEdge(ab2L, ab2R); addEdge(ab2L, waistL); addEdge(ab2R, waistR);
-    addEdge(waistL, waistR);
-
-    // Arms: Bicep, Elbow, Forearm, Hands
-    const elbL = addV(-38, -26, 0);
-    const elbR = addV(38, -26, 0);
-    const wristL = addV(-44, -2, 4);
-    const wristR = addV(44, -2, 4);
-    const handL = addV(-48, 12, 6);
-    const handR = addV(48, 12, 6);
-
-    addEdge(shL, elbL); addEdge(shR, elbR);
-    addEdge(elbL, wristL); addEdge(elbR, wristR);
-    addEdge(wristL, handL); addEdge(wristR, handR);
-
-    // Pelvis / Codpiece
-    const pelvisCenter = addV(0, 10, 8);
-    const hipL = addV(-16, 8, 4);
-    const hipR = addV(16, 8, 4);
-    addEdge(waistL, hipL); addEdge(waistR, hipR);
-    addEdge(hipL, pelvisCenter); addEdge(hipR, pelvisCenter);
-
-    // Thighs & Knees
-    const kneeL = addV(-14, 38, 6);
-    const kneeR = addV(14, 38, 6);
-    addEdge(hipL, kneeL); addEdge(hipR, kneeR);
-
-    // Calves & Boots
-    const ankleL = addV(-13, 68, 2);
-    const ankleR = addV(13, 68, 2);
-    const bootL = addV(-14, 78, 8);
-    const bootR = addV(14, 78, 8);
-
-    addEdge(kneeL, ankleL); addEdge(kneeR, ankleR);
-    addEdge(ankleL, bootL); addEdge(ankleR, bootR);
-
-    this.suitVertices = v;
-    this.suitEdges = e;
-
-    // Diagnostic Hologram Callouts
-    this.suitCallouts = [
-      { anchorIdx: headTop, label: "CRANIAL HUD", sub: "MK-85 TARGETING", dir: "left" },
-      { anchorIdx: chestCenter, label: "ARC REACTOR", sub: "3.2 GJ/S OUTPUT", dir: "right" },
-      { anchorIdx: handL, label: "REPULSOR ARRAY", sub: "ARMED // READY", dir: "left" },
-      { anchorIdx: kneeR, label: "THRUSTER VECTORS", sub: "STABILIZERS 100%", dir: "right" },
-    ];
+    this.yawVel = 0.0;
+    this.pitchVel = 0.0;
   }
 
   private setupInteractions(): void {
-    let startX = 0;
-    let startY = 0;
-
     const onPointerDown = (e: PointerEvent) => {
       this.isDragging = true;
       this.isResetting = false;
       this.canvas.setPointerCapture(e.pointerId);
       this.lastMouseX = e.clientX;
       this.lastMouseY = e.clientY;
-      startX = e.clientX;
-      startY = e.clientY;
       this.lastInteractionTime = Date.now();
       this.canvas.style.cursor = "grabbing";
     };
@@ -392,11 +126,11 @@ export class IronMan3DModelHUD {
       this.lastMouseX = e.clientX;
       this.lastMouseY = e.clientY;
 
-      this.yawVel = dx * 0.012;
-      this.pitchVel = dy * 0.012;
+      this.yawVel = dx * 0.009;
+      this.pitchVel = dy * 0.009;
 
       this.yaw += this.yawVel;
-      this.pitch = Math.max(-1.1, Math.min(1.1, this.pitch + this.pitchVel));
+      this.pitch = Math.max(-0.95, Math.min(0.95, this.pitch + this.pitchVel));
       this.lastInteractionTime = Date.now();
     };
 
@@ -410,8 +144,8 @@ export class IronMan3DModelHUD {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const zoomDelta = e.deltaY * -0.0015;
-      this.zoom = Math.max(0.65, Math.min(2.3, this.zoom + zoomDelta));
+      const zoomDelta = e.deltaY * -0.0018;
+      this.zoom = Math.max(0.5, Math.min(3.2, this.zoom + zoomDelta));
       this.lastInteractionTime = Date.now();
     };
 
@@ -435,8 +169,8 @@ export class IronMan3DModelHUD {
   public resize(): void {
     const dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width || 220;
-    const height = rect.height || 140;
+    const width = rect.width || 240;
+    const height = rect.height || 175;
 
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
@@ -462,28 +196,30 @@ export class IronMan3DModelHUD {
     if (!this.isRunning) return;
 
     const now = Date.now();
+    this.time += 0.035;
+    this.arcAngle += 0.04;
+    this.scanY = (this.scanY + 0.016) % 1.0;
 
-    // 1. Smooth reset transition
+    // Smooth reset or momentum damping
     if (this.isResetting) {
-      this.yaw += (this.targetYaw - this.yaw) * 0.12;
-      this.pitch += (this.targetPitch - this.pitch) * 0.12;
-      this.zoom += (this.targetZoom - this.zoom) * 0.12;
-      if (Math.abs(this.yaw - this.targetYaw) < 0.002 && Math.abs(this.pitch - this.targetPitch) < 0.002) {
+      this.yaw += (this.targetYaw - this.yaw) * 0.14;
+      this.pitch += (this.targetPitch - this.pitch) * 0.14;
+      this.zoom += (this.targetZoom - this.zoom) * 0.14;
+      if (Math.abs(this.yaw - this.targetYaw) < 0.003 && Math.abs(this.pitch - this.targetPitch) < 0.003) {
         this.yaw = this.targetYaw;
         this.pitch = this.targetPitch;
         this.zoom = this.targetZoom;
         this.isResetting = false;
       }
     } else if (!this.isDragging) {
-      // 2. Momentum damping
       this.yaw += this.yawVel;
-      this.pitch = Math.max(-1.1, Math.min(1.1, this.pitch + this.pitchVel));
-      this.yawVel *= 0.91;
-      this.pitchVel *= 0.91;
+      this.pitch = Math.max(-0.95, Math.min(0.95, this.pitch + this.pitchVel));
+      this.yawVel *= 0.92;
+      this.pitchVel *= 0.92;
 
-      // 3. Auto-orbit turntable rotation if idle > 2.0s
+      // Ambient turntable auto-orbit after 2.0s idle
       if (now - this.lastInteractionTime > 2000) {
-        const autoSpeed = this.state === "thinking" ? 0.024 : 0.008;
+        const autoSpeed = this.state === "thinking" ? 0.02 : 0.006;
         this.yaw += autoSpeed;
       }
     }
@@ -492,213 +228,248 @@ export class IronMan3DModelHUD {
     this.animFrameId = requestAnimationFrame(this.startRenderLoop);
   };
 
-  /**
-   * Projects a 3D point to 2D screen coordinates with full yaw and pitch rotation
-   */
-  private projectPoint(pt: Point3D, cx: number, cy: number, scaleFactor: number): { x: number; y: number; z: number } {
+  private render(): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const width = rect.width || 240;
+    const height = rect.height || 175;
+    const cx = width * 0.5;
+    const cy = height * 0.52;
+
+    this.ctx.clearRect(0, 0, width, height);
+    this.ctx.save();
+
+    // 1. Holographic Blueprint Background Grid & Radial Glow
+    this.renderBlueprintGrid(width, height, cx, cy);
+
+    // 2. Setup 3D Projection Matrix
+    const origCenter = this.viewMode === "helmet" ? HELMET_ORIG_CENTER : SUIT_ORIG_CENTER;
+    const baseScale = this.viewMode === "helmet"
+      ? (height * 0.78) / origCenter.height
+      : (height * 0.88) / origCenter.height;
+    const scale = baseScale * this.zoom;
+
     const cosY = Math.cos(this.yaw);
     const sinY = Math.sin(this.yaw);
     const cosP = Math.cos(this.pitch);
     const sinP = Math.sin(this.pitch);
 
-    // Rotate around Y-axis (Yaw)
-    const x1 = pt.x * cosY - pt.z * sinY;
-    const z1 = pt.x * sinY + pt.z * cosY;
+    // 3D Perspective Projection Affine Matrix
+    const m11 = cosY * scale;
+    const m12 = sinP * sinY * scale * 0.45;
+    const m21 = -sinP * 0.15 * scale;
+    const m22 = cosP * scale;
 
-    // Rotate around X-axis (Pitch)
-    const y2 = pt.y * cosP - z1 * sinP;
-    const z2 = pt.y * sinP + z1 * cosP;
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    this.ctx.transform(m11, m12, m21, m22, 0, 0);
+    this.ctx.translate(-origCenter.x, -origCenter.y);
 
-    // Perspective projection with camera distance
-    const dist = 280;
-    const pScale = (dist / (dist + z2)) * this.zoom * scaleFactor;
+    // 3. Render High-Resolution Vector Blueprint (Fill + Neon Glow Stroke)
+    const activePath = this.viewMode === "helmet" ? this.helmetPath : this.suitPath;
 
-    return {
-      x: cx + x1 * pScale,
-      y: cy + y2 * pScale,
-      z: z2,
-    };
+    // Fill pass with subtle holographic plasma gradient
+    const fillGrad = this.ctx.createLinearGradient(
+      origCenter.x - origCenter.width * 0.5,
+      origCenter.y - origCenter.height * 0.5,
+      origCenter.x + origCenter.width * 0.5,
+      origCenter.y + origCenter.height * 0.5
+    );
+    fillGrad.addColorStop(0, "rgba(0, 212, 255, 0.18)");
+    fillGrad.addColorStop(0.5, "rgba(0, 140, 255, 0.08)");
+    fillGrad.addColorStop(1, "rgba(0, 245, 212, 0.15)");
+    this.ctx.fillStyle = fillGrad;
+    this.ctx.fill(activePath);
+
+    // Stroke pass: glowing neon blueprint lines
+    this.ctx.lineWidth = 1.0 / scale;
+    this.ctx.strokeStyle = "rgba(0, 245, 212, 0.88)";
+    this.ctx.shadowBlur = 8;
+    this.ctx.shadowColor = "#00f5d4";
+    this.ctx.stroke(activePath);
+    this.ctx.shadowBlur = 0;
+
+    // Secondary inner wireframe accent stroke
+    this.ctx.lineWidth = 0.5 / scale;
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+    this.ctx.stroke(activePath);
+
+    // 4. Mode-Specific Holographic Optical Elements
+    if (this.viewMode === "helmet") {
+      this.renderHelmetOptics();
+    } else {
+      this.renderSuitArcReactor();
+    }
+
+    this.ctx.restore();
+
+    // 5. Holographic Scanline Laser Sweep (Screen space)
+    this.renderHologramScanline(width, height, cy);
+
+    // 6. Technical Engineering HUD Readouts
+    this.renderHUDLabels(width, height);
+
+    this.ctx.restore();
   }
 
-  private render(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width || 220;
-    const height = rect.height || 140;
-    const cx = width * 0.5;
-    const cy = height * 0.5;
-
-    this.ctx.clearRect(0, 0, width, height);
-    this.ctx.save();
-
-    // 1. Holographic Vignette Aura
-    const auraGrad = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(width, height) * 0.55);
-    auraGrad.addColorStop(0, "rgba(0, 212, 255, 0.12)");
-    auraGrad.addColorStop(0.7, "rgba(0, 140, 255, 0.04)");
-    auraGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-    this.ctx.fillStyle = auraGrad;
+  private renderBlueprintGrid(width: number, height: number, cx: number, cy: number): void {
+    // Soft radial aura behind model
+    const bgGlow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(width, height) * 0.55);
+    bgGlow.addColorStop(0, "rgba(0, 212, 255, 0.14)");
+    bgGlow.addColorStop(0.65, "rgba(0, 100, 220, 0.04)");
+    bgGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    this.ctx.fillStyle = bgGlow;
     this.ctx.beginPath();
     this.ctx.arc(cx, cy, Math.min(width, height) * 0.55, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 2. Render Selected View Mode
-    if (this.viewMode === "helmet") {
-      this.renderHelmet(cx, cy);
-    } else {
-      this.renderSuit(cx, cy);
+    // Subtle technical grid lines
+    this.ctx.lineWidth = 0.5;
+    this.ctx.strokeStyle = "rgba(0, 180, 255, 0.1)";
+
+    const step = 24;
+    for (let x = step; x < width; x += step) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, height);
+      this.ctx.stroke();
+    }
+    for (let y = step; y < height; y += step) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, y);
+      this.ctx.lineTo(width, y);
+      this.ctx.stroke();
     }
 
-    // 3. Technical HUD Coordinates Overlay
-    this.ctx.font = "7.5px 'Fira Code', 'Roboto Mono', monospace";
-    this.ctx.fillStyle = "rgba(0, 212, 255, 0.6)";
-    this.ctx.textAlign = "left";
-    const degYaw = Math.round(((this.yaw % (Math.PI * 2)) * 180) / Math.PI);
-    const degPitch = Math.round((this.pitch * 180) / Math.PI);
-    this.ctx.fillText(`3D YAW:${degYaw}° PITCH:${degPitch}° [${this.zoom.toFixed(1)}X]`, 8, height - 8);
+    // Center caliper crosshairs
+    this.ctx.lineWidth = 0.8;
+    this.ctx.strokeStyle = "rgba(0, 212, 255, 0.25)";
+    this.ctx.beginPath();
+    this.ctx.moveTo(cx - 16, cy);
+    this.ctx.lineTo(cx + 16, cy);
+    this.ctx.moveTo(cx, cy - 16);
+    this.ctx.lineTo(cx, cy + 16);
+    this.ctx.stroke();
+  }
 
-    this.ctx.textAlign = "right";
-    this.ctx.fillStyle = "rgba(255, 215, 0, 0.75)";
-    this.ctx.fillText(this.viewMode === "helmet" ? "HELMET // MK-85" : "ARMOR BLUEPRINT", width - 8, height - 8);
+  private renderHelmetOptics(): void {
+    // Left & Right eye slit polygons in helmet blueprint coordinates
+    // In helmet reference: y ~ 466, leftEye x ~ 210, rightEye x ~ 365
+    const eyePulse = 1.0 + this.audioLevel * 1.8;
+    let eyeColor = "#ffffff";
+    let glowColor = "#00ffff";
+
+    if (this.state === "listening") {
+      eyeColor = "#ffffff";
+      glowColor = "#ffd700";
+    } else if (this.state === "error") {
+      eyeColor = "#ffffff";
+      glowColor = "#ff4757";
+    }
+
+    const drawEye = (x: number, y: number, isLeft: boolean) => {
+      this.ctx.save();
+      this.ctx.shadowBlur = 12 * eyePulse;
+      this.ctx.shadowColor = glowColor;
+
+      this.ctx.beginPath();
+      if (isLeft) {
+        this.ctx.moveTo(x - 38, y - 6);
+        this.ctx.lineTo(x + 24, y);
+        this.ctx.lineTo(x + 22, y + 10);
+        this.ctx.lineTo(x - 34, y + 6);
+      } else {
+        this.ctx.moveTo(x - 24, y);
+        this.ctx.lineTo(x + 38, y - 6);
+        this.ctx.lineTo(x + 34, y + 6);
+        this.ctx.lineTo(x - 22, y + 10);
+      }
+      this.ctx.closePath();
+
+      this.ctx.fillStyle = eyeColor;
+      this.ctx.fill();
+
+      this.ctx.lineWidth = 2.0;
+      this.ctx.strokeStyle = glowColor;
+      this.ctx.stroke();
+      this.ctx.restore();
+    };
+
+    drawEye(216, 466, true);
+    drawEye(360, 466, false);
+  }
+
+  private renderSuitArcReactor(): void {
+    // Arc reactor location in suit blueprint coordinates: x ~ 288, y ~ 230
+    const rx = 288;
+    const ry = 230;
+    const pulse = 1.0 + this.audioLevel * 1.5;
+    const r = 16 * pulse;
+
+    this.ctx.save();
+    // Inner incandescent white core
+    this.ctx.shadowBlur = 16 * pulse;
+    this.ctx.shadowColor = "#00f5d4";
+
+    this.ctx.beginPath();
+    this.ctx.arc(rx, ry, r, 0, Math.PI * 2);
+    this.ctx.fillStyle = "#ffffff";
+    this.ctx.fill();
+
+    // Outer rotating magnetic containment ring
+    this.ctx.beginPath();
+    this.ctx.arc(rx, ry, r * 1.7, 0, Math.PI * 2);
+    this.ctx.lineWidth = 2.0;
+    this.ctx.strokeStyle = "#00d4ff";
+    this.ctx.stroke();
+
+    // Triad rotating coil notches
+    for (let i = 0; i < 3; i++) {
+      const a = this.arcAngle + (i * Math.PI * 2) / 3;
+      this.ctx.beginPath();
+      this.ctx.moveTo(rx + Math.cos(a) * (r * 1.4), ry + Math.sin(a) * (r * 1.4));
+      this.ctx.lineTo(rx + Math.cos(a) * (r * 2.1), ry + Math.sin(a) * (r * 2.1));
+      this.ctx.lineWidth = 2.5;
+      this.ctx.strokeStyle = "#00f5d4";
+      this.ctx.stroke();
+    }
 
     this.ctx.restore();
   }
 
-  private renderHelmet(cx: number, cy: number): void {
-    const scale = 0.95;
-    const projected = this.helmetVertices.map((v) => this.projectPoint(v, cx, cy, scale));
-
-    // Sort edges by average depth for wireframe rendering
-    this.ctx.lineWidth = 1.1;
-
-    // Draw Edges
-    for (const e of this.helmetEdges) {
-      const p1 = projected[e.p1];
-      const p2 = projected[e.p2];
-      const avgZ = (p1.z + p2.z) * 0.5;
-
-      // Depth alpha fading
-      const alpha = Math.max(0.18, Math.min(0.9, 0.65 + avgZ / 80));
-
-      this.ctx.beginPath();
-      this.ctx.moveTo(p1.x, p1.y);
-      this.ctx.lineTo(p2.x, p2.y);
-      this.ctx.strokeStyle = e.color || `rgba(0, 212, 255, ${alpha})`;
-      this.ctx.stroke();
-    }
-
-    // Glowing Eye Optics
-    this.renderGlowingEye(projected, this.helmetEyeLeft);
-    this.renderGlowingEye(projected, this.helmetEyeRight);
-  }
-
-  private renderGlowingEye(projected: { x: number; y: number; z: number }[], indices: number[]): void {
-    if (indices.length === 0) return;
-
-    this.ctx.beginPath();
-    this.ctx.moveTo(projected[indices[0]].x, projected[indices[0]].y);
-    for (let i = 1; i < indices.length; i++) {
-      this.ctx.lineTo(projected[indices[i]].x, projected[indices[i]].y);
-    }
-    this.ctx.closePath();
-
-    // Determine glow color based on state
-    let eyeColor = "#00ffff";
-    let glowColor = "rgba(0, 255, 255, 0.8)";
-    if (this.state === "listening") {
-      eyeColor = "#ffd700";
-      glowColor = "rgba(255, 215, 0, 0.9)";
-    } else if (this.state === "error") {
-      eyeColor = "#ff4757";
-      glowColor = "rgba(255, 71, 87, 0.9)";
-    }
-
-    const eyePulse = 1.0 + this.audioLevel * 1.6;
+  private renderHologramScanline(width: number, height: number, cy: number): void {
+    const sweepY = (this.scanY * height * 1.2) - (height * 0.1);
 
     this.ctx.save();
-    this.ctx.shadowBlur = 10 * eyePulse;
-    this.ctx.shadowColor = glowColor;
-    this.ctx.fillStyle = eyeColor;
-    this.ctx.fill();
+    const grad = this.ctx.createLinearGradient(0, sweepY - 12, 0, sweepY + 12);
+    grad.addColorStop(0, "rgba(0, 245, 212, 0)");
+    grad.addColorStop(0.5, "rgba(0, 255, 255, 0.45)");
+    grad.addColorStop(1, "rgba(0, 245, 212, 0)");
 
-    this.ctx.lineWidth = 1.2;
-    this.ctx.strokeStyle = "#ffffff";
+    this.ctx.fillStyle = grad;
+    this.ctx.fillRect(8, sweepY - 8, width - 16, 16);
+
+    this.ctx.lineWidth = 1.0;
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+    this.ctx.beginPath();
+    this.ctx.moveTo(8, sweepY);
+    this.ctx.lineTo(width - 8, sweepY);
     this.ctx.stroke();
     this.ctx.restore();
   }
 
-  private renderSuit(cx: number, cy: number): void {
-    const scale = 0.72;
-    const projected = this.suitVertices.map((v) => this.projectPoint(v, cx, cy, scale));
+  private renderHUDLabels(width: number, height: number): void {
+    this.ctx.font = "bold 8px 'Fira Code', 'Roboto Mono', monospace";
+    this.ctx.fillStyle = "rgba(0, 212, 255, 0.85)";
+    this.ctx.textAlign = "left";
 
-    // Draw suit wireframe edges
-    this.ctx.lineWidth = 1.0;
-    for (const e of this.suitEdges) {
-      const p1 = projected[e.p1];
-      const p2 = projected[e.p2];
-      const avgZ = (p1.z + p2.z) * 0.5;
-      const alpha = Math.max(0.15, Math.min(0.85, 0.55 + avgZ / 60));
+    const degYaw = Math.round(((this.yaw % (Math.PI * 2)) * 180) / Math.PI);
+    const degPitch = Math.round((this.pitch * 180) / Math.PI);
+    this.ctx.fillText(`3D YAW:${degYaw}°  PIT:${degPitch}° [${this.zoom.toFixed(1)}X]`, 8, height - 8);
 
-      this.ctx.beginPath();
-      this.ctx.moveTo(p1.x, p1.y);
-      this.ctx.lineTo(p2.x, p2.y);
-      this.ctx.strokeStyle = `rgba(0, 212, 255, ${alpha})`;
-      this.ctx.stroke();
-    }
-
-    // Glowing Chest Arc Reactor
-    const rc = projected[this.chestReactorCenterIdx];
-    if (rc) {
-      const pulse = 1.0 + this.audioLevel * 1.5;
-      const radius = 5.5 * this.zoom * pulse;
-
-      this.ctx.save();
-      this.ctx.beginPath();
-      this.ctx.arc(rc.x, rc.y, radius, 0, Math.PI * 2);
-      this.ctx.fillStyle = "#ffffff";
-      this.ctx.shadowBlur = 14 * pulse;
-      this.ctx.shadowColor = "#00f5d4";
-      this.ctx.fill();
-
-      // Outer reactor ring
-      this.ctx.beginPath();
-      this.ctx.arc(rc.x, rc.y, radius * 1.7, 0, Math.PI * 2);
-      this.ctx.lineWidth = 1.2;
-      this.ctx.strokeStyle = "#00d4ff";
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
-
-    // Diagnostic Hologram Callouts (Blueprint Leader Lines)
-    this.ctx.font = "6.5px 'Fira Code', 'Roboto Mono', monospace";
-    for (const c of this.suitCallouts) {
-      const p = projected[c.anchorIdx];
-      if (!p) continue;
-
-      const lineLen = c.dir === "left" ? -28 : 28;
-      const tagX = p.x + lineLen;
-      const tagY = p.y - 12;
-
-      this.ctx.beginPath();
-      this.ctx.moveTo(p.x, p.y);
-      this.ctx.lineTo(p.x + lineLen * 0.5, tagY);
-      this.ctx.lineTo(tagX, tagY);
-      this.ctx.lineWidth = 0.7;
-      this.ctx.strokeStyle = "rgba(0, 212, 255, 0.65)";
-      this.ctx.stroke();
-
-      // Callout Anchor Dot
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
-      this.ctx.fillStyle = "#00f5d4";
-      this.ctx.fill();
-
-      // Label Text
-      this.ctx.textAlign = c.dir === "left" ? "right" : "left";
-      this.ctx.fillStyle = "#ffffff";
-      this.ctx.fillText(c.label, tagX + (c.dir === "left" ? -3 : 3), tagY - 2);
-
-      this.ctx.fillStyle = "rgba(0, 212, 255, 0.75)";
-      this.ctx.fillText(c.sub, tagX + (c.dir === "left" ? -3 : 3), tagY + 7);
-    }
+    this.ctx.textAlign = "right";
+    this.ctx.fillStyle = "rgba(0, 245, 212, 0.9)";
+    const modelTag = this.viewMode === "helmet" ? "HELMET // MK-85" : "ARCHITECTURAL BLUEPRINT";
+    this.ctx.fillText(modelTag, width - 8, height - 8);
   }
 
   public destroy(): void {
