@@ -230,7 +230,7 @@ export class SettingsPanel {
           <div class="setting-group">
             <label class="setting-label">Core Visualizer Variant</label>
             <select class="setting-select" id="cfg-core-variant">
-              <option value="arc_reactor">Iron Man ARC Reactor</option>
+              <option value="arc_reactor">Celestial Fusion Core (Sci-Fi)</option>
               <option value="particle_orb">Perplexity 3D Particle Orb</option>
             </select>
           </div>

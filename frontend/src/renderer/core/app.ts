@@ -33,12 +33,14 @@ import { TranscriptBar } from "../hud/transcript-bar";
 import { SettingsPanel } from "../hud/panels/settings";
 import { SystemMonitorHUD } from "../hud/system-monitor";
 import { ParticleOrbVisualizer } from "../hud/particle-orb";
+import { FusionCoreVisualizer } from "../hud/fusion-core";
 import { SFXSynthesizer } from "../sfx/synthesizer";
 
 export class JarvisApp {
   private ws: WSClient;
   private sfx: SFXSynthesizer;
   private reactor: ArcReactor;
+  private fusionCore: FusionCoreVisualizer;
   private orbVisualizer: ParticleOrbVisualizer;
   private currentVariant: CoreVisualizerVariant = "arc_reactor";
   private waveform: Waveform;
@@ -63,6 +65,10 @@ export class JarvisApp {
     const coreContainer = document.getElementById("core-container");
     if (!coreContainer) throw new Error("Missing #core-container");
     this.reactor = new ArcReactor(coreContainer);
+
+    const fusionCanvas = document.getElementById("fusion-core-canvas") as HTMLCanvasElement;
+    if (!fusionCanvas) throw new Error("Missing #fusion-core-canvas");
+    this.fusionCore = new FusionCoreVisualizer(fusionCanvas);
 
     const orbCanvas = document.getElementById("orb-canvas") as HTMLCanvasElement;
     if (!orbCanvas) throw new Error("Missing #orb-canvas");
@@ -162,6 +168,7 @@ export class JarvisApp {
       const level = msg.level !== undefined ? msg.level : msg.data?.level || 0;
       this.waveform.updateLevel(level);
       this.reactor.setAudioLevel(level);
+      this.fusionCore?.setAudioLevel(level);
       this.orbVisualizer.setAudioLevel(level);
     });
 
@@ -238,6 +245,7 @@ export class JarvisApp {
 
     // 1. Update visualizers
     this.reactor.setState(newState);
+    this.fusionCore?.setState(newState);
     this.orbVisualizer.setState(newState);
     this.waveform.setState(newState);
     this.particles.setState(newState);
@@ -249,7 +257,7 @@ export class JarvisApp {
   }
 
   /**
-   * Switches active core visualizer between ARC Reactor and Perplexity 3D Particle Orb.
+   * Switches active core visualizer between Celestial Fusion Core and 3D Particle Orb.
    */
   public setCoreVariant(variant: CoreVisualizerVariant, notify: boolean = true): void {
     this.currentVariant = variant;
@@ -260,24 +268,33 @@ export class JarvisApp {
     }
 
     const coreContainer = document.getElementById("core-container");
+    const fusionCanvas = document.getElementById("fusion-core-canvas");
     const orbCanvas = document.getElementById("orb-canvas");
     const btnReactor = document.getElementById("btn-variant-reactor");
     const btnOrb = document.getElementById("btn-variant-orb");
 
     if (variant === "particle_orb") {
       coreContainer?.classList.add("inactive-variant");
+      fusionCanvas?.classList.add("inactive-variant");
+      fusionCanvas?.classList.remove("active-variant");
       orbCanvas?.classList.add("active-variant");
+      orbCanvas?.classList.remove("inactive-variant");
       btnReactor?.classList.remove("active");
       btnOrb?.classList.add("active");
+      this.fusionCore?.stop();
       this.orbVisualizer.start();
       this.orbVisualizer.setState(this.state);
     } else {
-      coreContainer?.classList.remove("inactive-variant");
+      coreContainer?.classList.add("inactive-variant");
+      fusionCanvas?.classList.remove("inactive-variant");
+      fusionCanvas?.classList.add("active-variant");
       orbCanvas?.classList.remove("active-variant");
+      orbCanvas?.classList.add("inactive-variant");
       btnReactor?.classList.add("active");
       btnOrb?.classList.remove("active");
       this.orbVisualizer.stop();
-      this.reactor.setState(this.state);
+      this.fusionCore?.start();
+      this.fusionCore?.setState(this.state);
     }
 
     if (notify) {
@@ -366,7 +383,7 @@ export class JarvisApp {
         this.toggleActivation();
       }
 
-      // KeyV: Toggle Core Visualizer Variant (ARC Reactor <-> Perplexity Orb)
+      // KeyV: Toggle Core Visualizer Variant (ARC Reactor <-> Particle Orb)
       if (e.code === "KeyV" && (e.target === document.body || (e.target as HTMLElement).tagName === "BUTTON")) {
         e.preventDefault();
         const nextVariant: CoreVisualizerVariant =

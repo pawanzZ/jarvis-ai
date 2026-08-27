@@ -14,7 +14,7 @@ class JarvisState(str, Enum):
 TRANSITIONS: dict[JarvisState, set[JarvisState]] = {
     JarvisState.IDLE: {JarvisState.LISTENING, JarvisState.ERROR},
     JarvisState.LISTENING: {JarvisState.THINKING, JarvisState.IDLE, JarvisState.ERROR},
-    JarvisState.THINKING: {JarvisState.SPEAKING, JarvisState.IDLE, JarvisState.ERROR},
+    JarvisState.THINKING: {JarvisState.SPEAKING, JarvisState.LISTENING, JarvisState.IDLE, JarvisState.ERROR},
     JarvisState.SPEAKING: {JarvisState.LISTENING, JarvisState.IDLE, JarvisState.ERROR},
     JarvisState.ERROR: {JarvisState.IDLE},
 }

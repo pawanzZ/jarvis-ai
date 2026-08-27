@@ -3,7 +3,7 @@
   "wakeWord": "Hey Jarvis",
   "pttEnabled": true,
   "pttKey": "Space",
-  "clapEnabled": true,
-  "clapSensitivity": 0.7,
+  "clapEnabled": false,
+  "clapSensitivity": 0.82,
   "gestureEnabled": false
 }

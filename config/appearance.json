@@ -4,6 +4,6 @@
   "crtScanlines": true,
   "glowIntensity": 1,
   "uiScale": 1,
-  "core_variant": "particle_orb",
+  "core_variant": "arc_reactor",
   "coreVariant": "arc_reactor"
 }

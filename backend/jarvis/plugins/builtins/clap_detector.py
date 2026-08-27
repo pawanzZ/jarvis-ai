@@ -23,7 +23,7 @@ class ClapDetectorPlugin(Plugin):
         config: Optional[Config] = None,
     ) -> None:
         super().__init__(bus=bus, config=config)
-        self._threshold = 0.7
+        self._threshold = 0.82
         self._window_ms = 500
         self._min_interval_ms = 50
         self._last_clap_time = 0.0
@@ -38,7 +38,7 @@ class ClapDetectorPlugin(Plugin):
     async def start(self, config: Optional[dict[str, Any]] = None) -> None:
         """Start and configure Clap Detector."""
         cfg = config or {}
-        self._threshold = float(cfg.get("threshold", 0.7))
+        self._threshold = float(cfg.get("threshold", 0.82))
         self._window_ms = int(cfg.get("window_ms", 500))
         self._min_interval_ms = int(cfg.get("min_interval_ms", 50))
         self._last_clap_time = 0.0
@@ -128,7 +128,7 @@ class ClapDetectorPlugin(Plugin):
             "properties": {
                 "threshold": {
                     "type": "number",
-                    "default": 0.7,
+                    "default": 0.82,
                 },
                 "window_ms": {
                     "type": "integer",

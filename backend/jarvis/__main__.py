@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import time
 from pathlib import Path
 from jarvis.core.bus import EventBus, Event
 from jarvis.core.state import StateMachine, JarvisState
@@ -65,9 +66,15 @@ async def main() -> None:
     silence_frames = 0
     ambient_energy = 0.009
     is_processing_turn = False
+    barge_in = asyncio.Event()
+    last_voice_time = time.monotonic()
+    LISTEN_IDLE_TIMEOUT = 10.0  # drop from LISTENING back to IDLE after this much silence
+
+    def _is_sentence_boundary(text: str) -> bool:
+        return any(ch in text for ch in ".!?\n")
 
     async def handle_speech_turn(audio_samples: list[float]) -> None:
-        nonlocal is_processing_turn
+        nonlocal is_processing_turn, last_voice_time
         if is_processing_turn:
             return
         is_processing_turn = True
@@ -92,9 +99,8 @@ async def main() -> None:
                     "data": {"speaker": "user", "text": "(Inaudible)"},
                     "text": "(Inaudible)",
                 })
-                await asyncio.sleep(0.6)
-                if state.state in (JarvisState.THINKING, JarvisState.LISTENING):
-                    await state.transition(JarvisState.IDLE)
+                if state.state != JarvisState.LISTENING:
+                    await state.transition(JarvisState.LISTENING)
                 return
 
             print(f"[Jarvis] Recognized: '{transcript}'")
@@ -105,17 +111,29 @@ async def main() -> None:
                 "text": transcript,
             })
 
-            # 2. Query LLM Brain
+            # 2. Stream LLM tokens while enqueueing spoken sentences in sync
+            tts = plugin_mgr.get_active(PluginType.TTS)
             llm = plugin_mgr.get_active(PluginType.LLM)
+            barge_in.clear()
             full_response = ""
+            pending = ""
+
             if llm and hasattr(llm, "generate_stream"):
                 async for token in llm.generate_stream(transcript):
+                    if barge_in.is_set():
+                        break
                     full_response += token
+                    pending += token
                     await server.broadcast({
                         "type": "llm_token",
                         "data": {"token": token},
                         "token": token,
                     })
+                    # Speak as soon as a sentence is complete so audio tracks the transcript
+                    if tts and _is_sentence_boundary(pending):
+                        flush = pending.strip()
+                        pending = ""
+                        await tts.on_event(Event(type="tts_enqueue", data={"text": flush}))
             elif llm:
                 ev = await llm.on_event(Event(type="llm_request", data={"prompt": transcript}))
                 if ev:
@@ -124,29 +142,42 @@ async def main() -> None:
                 full_response = f"Subsystems nominal, sir. Acknowledged: {transcript}"
 
             full_response = (full_response or "").strip()
-            print(f"[Jarvis] Assistant: {full_response}")
+
+            # Move to SPEAKING once there is content to verbalize
+            if full_response and state.state in (JarvisState.THINKING, JarvisState.LISTENING):
+                await state.transition(JarvisState.SPEAKING)
+
+            if barge_in.is_set():
+                pending = ""
+
+            # Flush any trailing (unpunctuated) text so it is still spoken
+            if tts and pending.strip() and not barge_in.is_set():
+                await tts.on_event(Event(type="tts_enqueue", data={"text": pending.strip()}))
+            elif tts and full_response and not hasattr(llm, "generate_stream"):
+                # Non-streaming path: speak the full response once
+                await tts.on_event(Event(type="tts_enqueue", data={"text": full_response}))
+
             await server.broadcast({
                 "type": "response_complete",
                 "data": {"full_text": full_response},
                 "full_text": full_response,
             })
 
-            # 3. Transition to SPEAKING and Play Voice
-            if state.state in (JarvisState.THINKING, JarvisState.LISTENING):
-                await state.transition(JarvisState.SPEAKING)
-
-            tts = plugin_mgr.get_active(PluginType.TTS)
+            # 3. Wait for speech to finish; barge-in interrupts and returns early
             if tts:
-                await tts.on_event(Event(type="speak", data={"text": full_response}))
-                # Wait while speaking
-                while getattr(tts, "_speaking", False):
+                while getattr(tts, "_speaking", False) and not barge_in.is_set():
                     await asyncio.sleep(0.1)
 
-            # 4. Return smoothly to IDLE
-            await asyncio.sleep(0.4)
-            if state.state == JarvisState.SPEAKING:
-                await state.transition(JarvisState.IDLE)
+            # 4. Voice detection HOLD: return to LISTENING for the next turn
+            await asyncio.sleep(0.3)
+            last_voice_time = time.monotonic()
+            if barge_in.is_set():
+                barge_in.clear()
+            if state.state != JarvisState.LISTENING:
+                await state.transition(JarvisState.LISTENING)
 
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
             print(f"[Jarvis] Speech processing error: {e}")
             await server.broadcast({"type": "error", "data": {"message": str(e)}, "message": str(e)})
@@ -157,7 +188,10 @@ async def main() -> None:
 
     # 4. Background Audio Worker Loop
     async def audio_worker() -> None:
-        nonlocal speech_buffer, speech_frames, silence_frames, ambient_energy
+        nonlocal speech_buffer, speech_frames, silence_frames, ambient_energy, is_processing_turn, last_voice_time
+        clap = plugin_mgr.get_plugin("clap_detector")
+        idle_voiced_run = 0
+        barge_run = 0
         await mic.start()
         print("[Jarvis] Microphone stream online and listening...")
 
@@ -182,26 +216,44 @@ async def main() -> None:
 
                 # Adaptively track ambient noise floor
                 ambient_energy = 0.96 * ambient_energy + 0.04 * energy
-                speech_threshold = max(0.016, ambient_energy * 1.7)
 
                 current_state = state.state
 
-                # Mode 1: IDLE - Voice activation trigger
+                # Mode 1: IDLE - activation (double-clap + confirmed single-sound trigger)
                 if current_state == JarvisState.IDLE:
-                    wake_word_enabled = config.get("activation", "wake_word_enabled", True)
-                    if wake_word_enabled and energy > speech_threshold and not is_processing_turn:
-                        print(f"[Jarvis] Voice detected ({energy:.4f} > {speech_threshold:.4f}) -> activating to LISTENING")
-                        await state.transition(JarvisState.LISTENING)
-                        speech_buffer = list(chunk)
-                        speech_frames = 1
-                        silence_frames = 0
-                        continue
+                    if not is_processing_turn:
+                        clap_fired = False
+                        # Wire the real double-clap detector into the live pipeline
+                        if clap is not None and getattr(clap, "_running", False):
+                            try:
+                                resp = await clap.on_event(Event(type="audio_energy", data={"energy": energy}))
+                                clap_fired = resp is not None
+                            except Exception:
+                                pass
+
+                        # Confirmed single-sound fallback: requires consecutive loud frames,
+                        # with a higher floor and wider margin so ordinary noise can't trip it.
+                        speech_threshold = max(0.07, ambient_energy * 3.5)
+                        if energy > speech_threshold:
+                            idle_voiced_run += 1
+                        else:
+                            idle_voiced_run = 0
+                        if idle_voiced_run >= 2 and not clap_fired:
+                            print(f"[Jarvis] Loud activation ({energy:.4f} > {speech_threshold:.4f}) -> activating to LISTENING")
+                            await state.transition(JarvisState.LISTENING)
+                            speech_buffer = list(chunk)
+                            speech_frames = 1
+                            silence_frames = 0
+                            last_voice_time = time.monotonic()
+                            idle_voiced_run = 0
+                            continue
 
                 # Mode 2: LISTENING - Accumulate speech turn
                 elif current_state == JarvisState.LISTENING:
-                    is_voiced = energy > max(0.014, ambient_energy * 1.35)
+                    is_voiced = energy > max(0.02, ambient_energy * 2.0)
 
                     if is_voiced:
+                        last_voice_time = time.monotonic()
                         speech_buffer.extend(chunk)
                         speech_frames += 1
                         silence_frames = 0
@@ -227,7 +279,7 @@ async def main() -> None:
                                 silence_frames = 0
                                 asyncio.create_task(handle_speech_turn(audio_copy))
                         else:
-                            # Pre-buffer: Keep rolling window of 2 chunks (~120ms) so utterance start isn't clipped
+                            # Pre-buffer: Keep rolling window so utterance start isn't clipped
                             if len(speech_buffer) > 2048:
                                 speech_buffer = speech_buffer[-2048:]
                             else:
@@ -243,6 +295,40 @@ async def main() -> None:
                         silence_frames = 0
                         asyncio.create_task(handle_speech_turn(audio_copy))
 
+                    # Idle timeout: drop to IDLE after sustained silence in listen mode
+                    if (
+                        speech_frames == 0
+                        and not is_processing_turn
+                        and (time.monotonic() - last_voice_time) > LISTEN_IDLE_TIMEOUT
+                    ):
+                        print("[Jarvis] No voice for a while -> dropping from LISTENING to IDLE")
+                        speech_buffer.clear()
+                        speech_frames = 0
+                        silence_frames = 0
+                        await state.transition(JarvisState.IDLE)
+
+                # Mode 3: THINKING - barge-in allowed (mic is clean while Jarvis reasons).
+                # SPEAKING deliberately has NO open-mic barge-in: on speakers Jarvis would
+                # otherwise hear its own voice and interrupt itself (abrupt stop/start loop).
+                elif current_state == JarvisState.THINKING:
+                    barge_floor = 0.08
+                    burst = energy > max(barge_floor, ambient_energy * 4.5)
+                    barge_run = barge_run + 1 if burst else 0
+                    if barge_run >= 2 and not is_processing_turn:
+                        print(f"[Jarvis] Barge-in ({energy:.4f}) during thinking -> interrupting and listening")
+                        tts = plugin_mgr.get_active(PluginType.TTS)
+                        if tts:
+                            await tts.on_event(Event(type="tts_interrupt"))
+                        speaker.stop()
+                        barge_in.set()
+                        speech_buffer.clear()
+                        speech_frames = 0
+                        silence_frames = 0
+                        last_voice_time = time.monotonic()
+                        barge_run = 0
+                        if state.state != JarvisState.LISTENING:
+                            await state.transition(JarvisState.LISTENING)
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -251,23 +337,27 @@ async def main() -> None:
 
     # 5. Core Event Handlers
     async def handle_activate(event: Event) -> None:
-        nonlocal speech_buffer, speech_frames, silence_frames
+        nonlocal speech_buffer, speech_frames, silence_frames, is_processing_turn, last_voice_time
         tts = plugin_mgr.get_active(PluginType.TTS)
         if tts:
             await tts.on_event(Event(type="tts_stop"))
         speaker.stop()
+        barge_in.set()
         speech_buffer.clear()
         speech_frames = 0
         silence_frames = 0
+        is_processing_turn = False
+        last_voice_time = time.monotonic()
         if state.state != JarvisState.LISTENING:
             await state.transition(JarvisState.LISTENING)
 
     async def handle_deactivate(event: Event) -> None:
-        nonlocal speech_buffer, speech_frames, silence_frames
+        nonlocal speech_buffer, speech_frames, silence_frames, last_voice_time
         tts = plugin_mgr.get_active(PluginType.TTS)
         if tts:
             await tts.on_event(Event(type="tts_stop"))
         speaker.stop()
+        barge_in.clear()
 
         # If user spoke and then deactivated (e.g. released PTT or clicked stop), process what was spoken!
         if len(speech_buffer) >= 3200 and not is_processing_turn:
@@ -283,6 +373,7 @@ async def main() -> None:
         speech_buffer.clear()
         speech_frames = 0
         silence_frames = 0
+        last_voice_time = time.monotonic()
         if state.state != JarvisState.IDLE:
             await state.transition(JarvisState.IDLE)
 

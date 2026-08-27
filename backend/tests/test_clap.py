@@ -126,3 +126,20 @@ async def test_clap_audio_chunk_rms():
     assert plugin.clap_count == 1
 
     await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_default_threshold_is_less_sensitive():
+    """Default threshold should be high enough that moderate noise won't count as a clap."""
+    plugin = ClapDetectorPlugin()
+    schema = plugin.get_schema()
+    assert schema["properties"]["threshold"]["default"] == 0.82
+
+    await plugin.start({})  # uses default threshold
+
+    # Moderate ambient energy (e.g. music / conversation) well below default
+    resp = await plugin.on_event(Event(type="audio_energy", data={"energy": 0.5}))
+    assert resp is None
+    assert plugin.clap_count == 0
+
+    await plugin.stop()

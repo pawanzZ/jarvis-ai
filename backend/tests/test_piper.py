@@ -66,7 +66,10 @@ async def test_piper_speak_lifecycle_events():
     assert resp.type == "tts_start"
 
     # Wait for synthesis & playback completion
-    await asyncio.sleep(0.4)
+    for _ in range(25):
+        if "tts_done" in emitted_types:
+            break
+        await asyncio.sleep(0.05)
 
     assert "tts_start" in emitted_types
     assert "audio_chunk" in emitted_types
@@ -114,3 +117,93 @@ async def test_piper_ignores_when_stopped():
     plugin = PiperTTSPlugin()
     resp = await plugin.on_event(Event(type="tts_speak", data={"text": "Test"}))
     assert resp is None
+
+
+@pytest.mark.asyncio
+async def test_piper_enqueue_streams_sentences_in_order():
+    """Verify FIFO queueing: sentences enqueued while speaking are spoken in order."""
+    bus = EventBus()
+    bus_task = asyncio.create_task(bus.process())
+    plugin = PiperTTSPlugin(bus=bus)
+    await plugin.start({})
+
+    spoken = []
+
+    async def _capture(ev: Event):
+        if ev.type == "tts_start":
+            spoken.append(ev.data.get("text"))
+
+    bus.on("tts_start", _capture)
+
+    # Enqueue first sentence
+    resp = await plugin.on_event(Event(type="tts_enqueue", data={"text": "Hello, sir."}))
+    assert resp is not None
+    assert resp.type == "tts_queued"
+
+    # Immediately enqueue a second sentence (simulates streaming while speaking)
+    resp2 = await plugin.on_event(Event(type="tts_enqueue", data={"text": "All systems nominal."}))
+    assert resp2 is not None
+    assert resp2.type == "tts_queued"
+
+    # Consumer should keep speaking until the queue drains
+    for _ in range(25):
+        if not plugin._speaking and not plugin._queue:
+            break
+        await asyncio.sleep(0.1)
+
+    assert plugin._speaking is False
+    assert plugin._queue == []
+    assert spoken == ["Hello, sir.", "All systems nominal."]
+
+    await plugin.stop()
+    bus_task.cancel()
+    try:
+        await bus_task
+    except asyncio.CancelledError:
+        pass
+
+
+@pytest.mark.asyncio
+async def test_piper_interrupt_clears_queue():
+    """Verify tts_interrupt stops playback and flushes the pending speech queue."""
+    bus = EventBus()
+    bus_task = asyncio.create_task(bus.process())
+    plugin = PiperTTSPlugin(bus=bus)
+    await plugin.start({})
+
+    long = "Sentence one that keeps talking on and on. " * 3
+    await plugin.on_event(Event(type="tts_enqueue", data={"text": long}))
+    await plugin.on_event(Event(type="tts_enqueue", data={"text": "second queued utterance."}))
+    await asyncio.sleep(0.02)
+    assert plugin._speaking is True
+    assert len(plugin._queue) >= 1
+
+    resp = await plugin.on_event(Event(type="tts_interrupt", data={}))
+    assert resp is not None
+    assert resp.type == "tts_done"
+    assert resp.data.get("interrupted") is True
+    assert plugin._speaking is False
+    assert plugin._queue == []
+
+    await plugin.stop()
+    bus_task.cancel()
+    try:
+        await bus_task
+    except asyncio.CancelledError:
+        pass
+
+
+@pytest.mark.asyncio
+async def test_piper_speak_uses_queue_semantics():
+    """'speak' should now append to the queue rather than restart synthesis."""
+    plugin = PiperTTSPlugin()
+    await plugin.start({})
+    plugin._speaking = True  # simulate an active consumer
+
+    resp = await plugin.on_event(Event(type="speak", data={"text": "More text."}))
+    assert resp is not None
+    assert resp.type == "tts_start"
+    # Should have been enqueued without cancelling current speech
+    assert len(plugin._queue) == 1
+    await plugin.stop()
+

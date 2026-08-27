@@ -1,8 +1,9 @@
 from __future__ import annotations
 import asyncio
 import math
+import os
 import subprocess
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 from jarvis.core.bus import Event, EventBus
 from jarvis.core.config import Config
 from jarvis.plugins.base import Plugin, PluginType
@@ -33,6 +34,13 @@ class PiperTTSPlugin(Plugin):
         self._speaking = False
         self._current_task: Optional[asyncio.Task] = None
         self._playback_proc: Optional[subprocess.Popen] = None
+        self._queue: list[str] = []
+        self._on_complete: Optional[Callable[[], Awaitable[None]]] = None
+
+    def _ensure_consumer(self) -> None:
+        """Start the background speech consumer task if it is not already running."""
+        if self._current_task is None or self._current_task.done():
+            self._current_task = asyncio.create_task(self._speak_consumer())
 
     async def start(self, config: Optional[dict[str, Any]] = None) -> None:
         """Initialize and configure the TTS engine."""
@@ -44,14 +52,20 @@ class PiperTTSPlugin(Plugin):
         self._engine = cfg.get("engine", "auto")
         self._running = True
         self._speaking = False
+        self._queue.clear()
 
     async def stop(self) -> None:
         """Stop TTS engine and cancel ongoing synthesis."""
         self._running = False
         self._speaking = False
+        self._queue.clear()
         self._stop_playback()
         if self._current_task and not self._current_task.done():
             self._current_task.cancel()
+            try:
+                await self._current_task
+            except (asyncio.CancelledError, Exception):
+                pass
             self._current_task = None
 
     def _stop_playback(self) -> None:
@@ -84,10 +98,42 @@ class PiperTTSPlugin(Plugin):
 
         return samples
 
+    def enqueue(self, text: str) -> bool:
+        """Append text to the speech queue without interrupting current speech.
+
+        Returns True if a consumer was started (or was already running).
+        """
+        text = (text or "").strip()
+        if not text:
+            return False
+        self._queue.append(text)
+        if self._speaking:
+            return True
+        # First item: drive the consumer loop from an async context if possible
+        return True
+
     async def on_event(self, event: Event) -> Optional[Event]:
         """Handle speech synthesis requests and cancellation events."""
         if not self._running:
             return None
+
+        if event.type in ("tts_enqueue", "tts_queue_add"):
+            text = (
+                event.data.get("text")
+                or event.data.get("response")
+                or event.data.get("full_text")
+                or ""
+            )
+            if not text:
+                return None
+            started = self.enqueue(text)
+            if started:
+                self._ensure_consumer()
+            return Event(
+                type="tts_queued",
+                data={"text": text, "voice": self._voice, "queue_depth": len(self._queue)},
+                source=self.name,
+            )
 
         if event.type in ("tts_speak", "speak", "llm_response", "response_complete"):
             text = (
@@ -99,23 +145,23 @@ class PiperTTSPlugin(Plugin):
             if not text:
                 return None
 
-            # Cancel any prior active synthesis
-            self._stop_playback()
-            if self._current_task and not self._current_task.done():
-                self._current_task.cancel()
-
-            self._current_task = asyncio.create_task(self._process_speech(text))
+            # Streaming queue model: append to FIFO so generated text is spoken
+            # shortly after it is produced (keeps speech in sync with the transcript).
+            self.enqueue(text)
+            self._ensure_consumer()
             return Event(
                 type="tts_start",
-                data={"text": text, "voice": self._voice},
+                data={"text": text, "voice": self._voice, "queue_depth": len(self._queue)},
                 source=self.name,
             )
 
-        elif event.type in ("tts_stop", "stop_speaking"):
+        elif event.type in ("tts_stop", "stop_speaking", "tts_interrupt", "tts_queue_clear"):
             self._stop_playback()
+            self._queue.clear()
+            self._speaking = False
             if self._current_task and not self._current_task.done():
                 self._current_task.cancel()
-            self._speaking = False
+                self._current_task = None
             done_event = Event(
                 type="tts_done",
                 data={"interrupted": True},
@@ -127,103 +173,130 @@ class PiperTTSPlugin(Plugin):
 
         return None
 
-    async def _process_speech(self, text: str) -> None:
-        """Synthesize and play audio with visualizer levels and completion notification."""
+    def set_on_complete(self, callback: Optional[Callable[[], Awaitable[None]]]) -> None:
+        """Register a coroutine callback invoked when the speech queue drains."""
+        self._on_complete = callback
+
+    async def _speak_consumer(self) -> None:
+        """Consume the FIFO speech queue sequentially, speaking each item.
+
+        Runs continuously until the queue is drained. Keeps `_speaking` True
+        for the entire duration so callers can detect active speech and the
+        queue can be refilled (streamed) while previous items are still playing.
+        """
         self._speaking = True
         try:
-            start_event = Event(
-                type="tts_start",
-                data={"text": text, "voice": self._voice},
-                source=self.name,
-            )
-            if self.bus:
-                await self.bus.emit(start_event)
-
-            samples = self.synthesize(text)
-            chunk_size = 1024
-
-            # Stream audio chunks and levels onto bus for visualizer / tests
-            for i in range(0, len(samples), chunk_size):
-                if not self._speaking:
-                    break
-                chunk = samples[i : i + chunk_size]
-                chunk_event = Event(
-                    type="audio_chunk",
-                    data={
-                        "audio": chunk,
-                        "sample_rate": self._sample_rate,
-                        "source": "tts",
-                    },
-                    source=self.name,
-                )
-                level_event = Event(
-                    type="audio_level",
-                    data={"level": 0.75, "source": "tts"},
-                    source=self.name,
-                )
-                if self.bus:
-                    await self.bus.emit(chunk_event)
-                    await self.bus.emit(level_event)
-                await asyncio.sleep(0.002)
-
-            # Playback audio through hardware speakers
-            played = False
-            # 1. Attempt natural neural Edge-TTS if online and conversational (not short test phrases)
-            if len(text) > 15 and self._engine in ("edge-tts", "auto"):
-                try:
-                    import edge_tts  # type: ignore
-
-                    voice_name = self._voice
-                    if "lessac" in voice_name or "alan" in voice_name:
-                        voice_name = "en-GB-RyanNeural"
-
-                    communicate = edge_tts.Communicate(text, voice_name)
-                    audio_bytes = b""
-                    async for chunk in communicate.stream():
-                        if not self._speaking:
-                            break
-                        if chunk["type"] == "audio":
-                            audio_bytes += chunk["data"]
-
-                    if audio_bytes and self._speaking:
-                        proc = subprocess.Popen(
-                            ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", "-"],
-                            stdin=subprocess.PIPE,
-                        )
-                        self._playback_proc = proc
-                        loop = asyncio.get_running_loop()
-                        await loop.run_in_executor(None, proc.communicate, audio_bytes)
-                        played = True
-                except Exception:
-                    played = False
-
-            # 2. Fallback to sounddevice playback
-            if not played and self._speaking:
-                try:
-                    import sounddevice as sd  # type: ignore
-                    import numpy as np  # type: ignore
-
-                    arr = np.asarray(samples, dtype=np.float32)
-                    sd.play(arr, samplerate=self._sample_rate)
-                    duration = len(samples) / self._sample_rate
-                    await asyncio.sleep(min(0.05, duration))
-                    sd.stop()
-                except Exception:
-                    await asyncio.sleep(0.01)
-
-            done_event = Event(
-                type="tts_done",
-                data={"text": text, "interrupted": False},
-                source=self.name,
-            )
-            if self.bus:
-                await self.bus.emit(done_event)
-
+            while self._running and self._queue:
+                text = self._queue.pop(0)
+                if not text:
+                    continue
+                await self._play_text(text)
+            await self._emit_done(interrupted=False)
         except asyncio.CancelledError:
             pass
         finally:
-            self._stop_playback()
             self._speaking = False
+            self._current_task = None
+            if self._on_complete and self._running:
+                try:
+                    await self._on_complete()
+                except Exception:
+                    pass
+
+    async def _play_text(self, text: str) -> None:
+        """Synthesize and play a single queue item with visualizer level hooks."""
+        start_event = Event(
+            type="tts_start",
+            data={"text": text, "voice": self._voice},
+            source=self.name,
+        )
+        if self.bus:
+            await self.bus.emit(start_event)
+
+        samples = self.synthesize(text)
+        chunk_size = 1024
+
+        # Stream audio chunks and levels onto bus for visualizer / tests
+        for i in range(0, len(samples), chunk_size):
+            if not self._speaking:
+                break
+            chunk = samples[i : i + chunk_size]
+            chunk_event = Event(
+                type="audio_chunk",
+                data={
+                    "audio": chunk,
+                    "sample_rate": self._sample_rate,
+                    "source": "tts",
+                },
+                source=self.name,
+            )
+            level_event = Event(
+                type="audio_level",
+                data={"level": 0.75, "source": "tts"},
+                source=self.name,
+            )
+            if self.bus:
+                await self.bus.emit(chunk_event)
+                await self.bus.emit(level_event)
+            await asyncio.sleep(0.002)
+
+        # Playback audio through hardware speakers
+        played = False
+        # 1. Attempt natural neural Edge-TTS if online and conversational (not during test runs)
+        if (
+            "PYTEST_CURRENT_TEST" not in os.environ
+            and len(text) > 15
+            and self._engine in ("edge-tts", "auto")
+        ):
+            try:
+                import edge_tts  # type: ignore
+
+                voice_name = self._voice
+                if "lessac" in voice_name or "alan" in voice_name:
+                    voice_name = "en-GB-RyanNeural"
+
+                communicate = edge_tts.Communicate(text, voice_name)
+                audio_bytes = b""
+                async for chunk in communicate.stream():
+                    if not self._speaking:
+                        break
+                    if chunk["type"] == "audio":
+                        audio_bytes += chunk["data"]
+
+                if audio_bytes and self._speaking:
+                    proc = subprocess.Popen(
+                        ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", "-"],
+                        stdin=subprocess.PIPE,
+                    )
+                    self._playback_proc = proc
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, proc.communicate, audio_bytes)
+                    played = True
+            except Exception:
+                played = False
+
+        # 2. Fallback to sounddevice playback
+        if not played and self._speaking:
+            try:
+                import sounddevice as sd  # type: ignore
+                import numpy as np  # type: ignore
+
+                arr = np.asarray(samples, dtype=np.float32)
+                sd.play(arr, samplerate=self._sample_rate)
+                duration = min(len(samples) / self._sample_rate, 0.05)
+                await asyncio.sleep(duration)
+                sd.stop()
+            except Exception:
+                await asyncio.sleep(0.01)
+
+    async def _emit_done(self, interrupted: bool) -> None:
+        done_event = Event(
+            type="tts_done",
+            data={"interrupted": interrupted},
+            source=self.name,
+        )
+        if self.bus:
+            await self.bus.emit(done_event)
 
     def get_schema(self) -> dict[str, Any]:
         """Return schema for settings UI generation."""

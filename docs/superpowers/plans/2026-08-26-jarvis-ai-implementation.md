@@ -1,5 +1,7 @@
 # Jarvis AI Implementation Plan
 
+> **Status:** ✅ Complete — all 20 tasks (93 steps) implemented and merged. See the "Post-Plan Extensions" section below for capabilities shipped beyond this roadmap.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a voice-first, always-on desktop AI assistant with a full-screen HUD, pluggable AI backends, and Iron Man-inspired aesthetics.
@@ -2753,3 +2755,30 @@ git commit -m "feat: Dev scripts and README"
 | 6 | 17 | Face tracking integration |
 | 7 | 18-19 | Sound effects and settings UI |
 | 8 | 20 | Packaging and documentation |
+
+---
+
+## Post-Plan Extensions (shipped after Task 20)
+
+The following capabilities were implemented beyond the original roadmap and are part of the completed v1:
+
+### E1. Wired Real Audio Pipeline
+Replaced placeholder audio with a working pipeline: `MicStream` (sounddevice) streams real mic input, `VAD` adapts to the ambient noise floor with hangover windows and pre-buffering (prevents utterance-start clipping), live Whisper STT runs on captured turns, Ollama streams LLM tokens, and Piper TTS plays neural speech with graceful turn completion.
+
+### E2. System Telemetry & Weather
+Added `backend/jarvis/system/monitor.py` — real-time CPU (via `/proc/stat` deltas), GPU detection, memory, disk, network transfer rates (`/proc/net/dev`), OS/kernel/hostname, system & session uptime, plus weather/location from `wttr.in`. Streamed to the frontend over WebSocket as `system_telemetry` / `weather_telemetry` and rendered in a System Monitor HUD panel and the status bar.
+
+### E3. 3D Particle Orb Core
+A second switchable core visualizer (`particle-orb.ts`): ~1,350 Fibonacci-distributed particles on a 3D sphere with perspective projection. The sphere surface stays rigid (it never changes shape); only a small random subset of dots pulse in place. Switch via `V`, toolbar buttons, or Settings; preference persists.
+
+### E4. Config Persistence & Live Sync
+Expanded `Config` namespaces (`core`, `voice`, `brain`, `activation`, `appearance`, `vision`, `sfx`, `plugins/*`, `themes/*`). The backend persists `config_update` / `settings_save` messages to JSON and broadcasts `config_updated`; the frontend `settings_response` hydrates the Settings drawer on connect.
+
+### E5. Expanded WebSocket Protocol
+Added typed message handling in `frontend/src/renderer/core/types.ts` for `system_telemetry`, `weather_telemetry`, `settings_response`, `config_updated`, `transcript_stream`, `connection`, `latency`, `telemetry_request`, `weather_request`, and `settings_save`. Server now returns structured error codes (`INVALID_PAYLOAD`, `JSON_DECODE_ERROR`, `SERVER_ERROR`).
+
+### E6. Adversarial Test Suite
+Added `backend/tests/adversarial/` covering malformed WS payloads, plugin manager error isolation, config edge cases, audio edge cases, and state machine robustness alongside the existing per-module unit tests.
+
+### E7. HUD QoL Enhancements
+Keyboard shortcuts (`V` core variant, `Space` PTT, `F2`/`Ctrl+S` settings, `Escape` close), quick-control buttons (PTT, clear, variant), ALSA mic gain normalization, and auto detection of the local Ollama model (`llama3.2:3b`).

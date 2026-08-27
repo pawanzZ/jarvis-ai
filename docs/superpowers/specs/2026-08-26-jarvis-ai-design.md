@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-26
 **Classification:** Architectural — New project
-**Status:** Draft
+**Status:** Implemented (v1 complete) — reflects final shipped architecture
 
 ---
 
@@ -17,6 +17,17 @@ A voice-first, always-on desktop AI assistant inspired by JARVIS from Iron Man. 
 3. Pluggable backends — swap STT, TTS, LLM, activation methods via config/plugins
 4. Free by default — local-first with optional cloud fallback
 5. Nerdy aesthetic — Iron Man HUD, ARC reactor imagery, sophisticated animations
+
+## Delivered Capabilities (v1)
+
+Beyond the core roadmap, the following were implemented and shipped:
+
+- **Real-time hardware telemetry** — CPU, GPU, RAM, Disk, Network rates, OS/kernel/hostname detection, system & session uptime (screen time), streamed over WebSocket to a System Monitor HUD panel.
+- **Weather & location** — live conditions fetched from `wttr.in` (cached with network fallback), surfaced in the Status Bar.
+- **3D Particle Orb core visualizer** — a second "core" variant alongside the ARC Reactor: a 1,350-particle Fibonacci-distributed 3D point cloud with perspective projection, state-driven color, and a rigid sphere surface with only a handful of randomly-pulsing dots. Switch via the `V` key, on-screen buttons, or the settings panel; preference persists to `localStorage` and syncs to backend config.
+- **Fully wired real audio pipeline** — actual microphone streaming (sounddevice) with adaptive VAD (noise-floor tracking, hangover windows, pre-buffering to avoid utterance clipping), live Whisper STT transcription, streaming Ollama LLM tokens, and neural TTS playback with smooth turn completion.
+- **Runtime settings persistence** — slide-out settings drawer with radio/range/select controls that push `config_update`/`settings_save` messages over WebSocket; the backend persists JSON namespaces per plugin/core.
+- **Live network state sync** — `connection`/`latency` events, `settings_response`, `config_updated` broadcasting, and typed in/out message protocol in the shared frontend type module.
 
 ## Non-Goals (v1)
 
@@ -171,11 +182,11 @@ IDLE → LISTENING → THINKING → SPEAKING → IDLE
 
 ### ARC Reactor Core
 
-Center-stage SVG/Three.js animation:
+Center-stage Canvas/CSS animation:
 
 - **Outer ring**: rotating segmented arcs (reactor housing)
 - **Middle ring**: pulsing concentric circles with energy lines
-- **Inner core**: bright glow, intensity scales with activity
+- **Inner core**: bright glow, intensity scales with audio level & activity
 
 **States:**
 - **Idle**: dim blue, slow rotation
@@ -183,6 +194,17 @@ Center-stage SVG/Three.js animation:
 - **Thinking**: spinning particles, amber glow
 - **Speaking**: waveform rings emanating, bright white/blue
 - **Boot**: energy burst, full brightness surge
+
+### Particle Orb Core (Alternate Visualizer)
+
+A switchable 3D particle orb rendered on Canvas:
+
+- ~1,350 particles distributed on a unit sphere via Fibonacci lattice
+- 3D rotation + perspective projection
+- Rigid sphere surface that never changes shape
+- Only a small random subset of dots pulse gently in place
+- State-reactive color palette (idle/listening/thinking/speaking/error)
+- Switch between ARC Reactor and Orb via `V` key, buttons, or settings; persisted
 
 ### Visual Elements
 
@@ -238,16 +260,25 @@ All generated via Web Audio API (no external files). User can replace with custo
 ### Config Structure
 
 ```
-jarvis/config/
-├── core.json
+config/
+├── default.yaml             # Master reference configuration
+├── core.json                # Host, port, audio sample/chunk, log level, theme
+├── voice.json               # STT/TTS plugin selection, voice, rate, sensitivity, volume
+├── brain.json               # LLM plugin, model, temperature, max tokens, system prompt
+├── activation.json          # Wake word, PTT (key/mode), clap, gesture toggles
+├── appearance.json          # Theme, core variant, particle density, CRTs, glow, ui scale
+├── vision.json              # Camera index, face tracking / gaze / helmet boot toggles
+├── sfx.json                 # Master volume + per-SFX enable toggles
 ├── plugins/
-│   ├── stt.json
-│   ├── tts.json
-│   ├── llm.json
-│   └── activation.json
+│   ├── whisper_local.json   # STT model
+│   ├── piper_tts.json       # TTS voice
+│   ├── ollama_llm.json      # LLM model & base URL
+│   ├── push_to_talk.json    # Keybind & mode
+│   ├── clap_detector.json   # Threshold & window
+│   └── face_tracker.json    # Camera & confidence
 └── themes/
     ├── arc-reactor.json
-    └── custom.json
+    └── iron_man.json
 ```
 
 ### Settings UI
@@ -256,13 +287,15 @@ Voice command: *"Open settings"* → panel slides in from right.
 
 | Section | Controls |
 |---------|----------|
-| **Voice** | STT plugin, TTS voice, mic device, volume |
-| **AI Brain** | LLM plugin, model dropdown, API keys (encrypted), temperature |
-| **Activation** | Toggle methods, hotkey picker, wake word trainer, clap sensitivity |
-| **Appearance** | Theme picker, color accents, scan lines, particle density |
+| **Voice** | STT plugin, TTS voice, mic device, volume, rate |
+| **AI Brain** | LLM plugin, model dropdown, temperature, max tokens, system prompt |
+| **Activation** | Toggle methods (wake word, PTT, clap), hotkey picker (Space), clap sensitivity |
+| **Appearance** | Theme picker, core visualizer variant (ARC Reactor / Particle Orb), particle density, CRT scanlines, glow, ui scale |
 | **Face/Eye** | Camera device, gaze tracking, helmet boot toggle |
-| **Sounds** | Volume, per-SFX toggle, custom sound upload |
+| **Sounds** | Volume, per-SFX toggle (power-up/chimes/hum/error/thinking) |
 | **Developer** | Debug logs, WebSocket inspector, plugin hot-reload |
+
+Settings changes are persisted by the backend to the matching JSON namespace and broadcast back (`config_updated`) so all clients stay in sync.
 
 ### Themes
 
@@ -280,55 +313,60 @@ jarvis-ai/
 ├── backend/                    # Python
 │   ├── pyproject.toml
 │   ├── jarvis/
-│   │   ├── __main__.py
+│   │   ├── __main__.py         # Orchestrator: plugins, audio worker, telemetry
 │   │   ├── core/
 │   │   │   ├── bus.py          # Event bus
 │   │   │   ├── state.py        # State machine
-│   │   │   └── config.py
+│   │   │   └── config.py       # JSON/YAML namespace store
 │   │   ├── plugins/
 │   │   │   ├── base.py         # Plugin interface
-│   │   │   ├── manager.py      # Plugin loader
-│   │   │   ├── stt/            # Whisper plugins
-│   │   │   ├── tts/            # Piper, edge-tts
-│   │   │   ├── llm/            # Ollama, OpenAI, etc.
-│   │   │   ├── activation/     # Wake word, clap, PTT, gesture
-│   │   │   └── vision/         # Face tracker
+│   │   │   ├── manager.py      # Plugin loader & lifecycle
+│   │   │   └── builtins/
+│   │   │       ├── whisper_local.py   # STT
+│   │   │       ├── piper_tts.py       # TTS
+│   │   │       ├── ollama_llm.py      # LLM
+│   │   │       ├── push_to_talk.py    # Activation
+│   │   │       ├── clap_detector.py   # Activation
+│   │   │       └── face_tracker.py    # Vision
 │   │   ├── audio/
 │   │   │   ├── mic_stream.py
 │   │   │   ├── speaker_output.py
-│   │   │   └── vad.py
-│   │   └── ws_server.py
-│   └── tests/
+│   │   │   └── vad.py          # Noise-adaptive VAD
+│   │   ├── system/
+│   │   │   └── monitor.py      # Hardware/OS/network/weather telemetry
+│   │   └── ws_server.py        # WebSocket gateway + settings/telemetry handlers
+│   └── tests/                  # Unit + adversarial suites
 │
 ├── frontend/                   # Electron + TypeScript
 │   ├── package.json
 │   ├── tsconfig.json
-│   ├── src/
-│   │   ├── main.ts
-│   │   ├── preload.ts
-│   │   └── renderer/
-│   │       ├── index.html
-│   │       ├── core/
-│   │       │   ├── app.ts
-│   │       │   ├── ws-client.ts
-│   │       │   └── state-manager.ts
-│   │       ├── hud/
-│   │       │   ├── arc-reactor.ts
-│   │       │   ├── waveform.ts
-│   │       │   ├── particles.ts
-│   │       │   ├── helmet-boot.ts
-│   │       │   ├── gaze-parallax.ts
-│   │       │   └── panels/
-│   │       │       ├── chat.ts
-│   │       │       ├── settings.ts
-│   │       │       └── status.ts
-│   │       ├── sfx/
-│   │       │   └── synthesizer.ts
-│   │       └── themes/
-│   │           └── loader.ts
-│   └── tests/
+│   ├── scripts/                # copy-assets, test-modules
+│   └── src/
+│       ├── main.ts
+│       ├── preload.ts
+│       └── renderer/
+│           ├── index.html
+│           ├── core/
+│           │   ├── app.ts             # Master coordinator
+│           │   ├── types.ts           # Typed WS protocol
+│           │   └── ws-client.ts
+│           ├── hud/
+│           │   ├── arc-reactor.ts/.css
+│           │   ├── particle-orb.ts/.css
+│           │   ├── waveform.ts
+│           │   ├── particles.ts
+│           │   ├── system-monitor.ts
+│           │   ├── status-bar.ts
+│           │   ├── transcript-bar.ts
+│           │   └── panels/
+│           │       ├── settings.ts/.css
+│           │       └── ...
+│           └── sfx/
+│               └── synthesizer.ts
 │
-├── config/                     # Defaults
+├── config/                     # Defaults (core, voice, brain, activation,
+│                              #   appearance, vision, sfx, themes, plugins/)
+├── docs/superpowers/           # Plan & design specification
 ├── scripts/
 │   ├── setup.sh
 │   └── dev.sh
@@ -344,26 +382,37 @@ JSON messages over localhost:8765.
 ### Backend → Frontend
 
 ```json
-{"type": "state_change", "state": "listening"}
+{"type": "state_change", "state": "listening", "data": {"state": "listening", "previous": "idle"}}
 {"type": "transcript_partial", "text": "Hey Jarvis what's the"}
-{"type": "transcript_final", "text": "Hey Jarvis, what's the weather?"}
+{"type": "transcript_final", "text": "Hey Jarvis, what's the weather?", "speaker": "user"}
+{"type": "transcript_stream", "token": "The"}
 {"type": "llm_token", "token": "The"}
 {"type": "llm_token", "token": " temperature"}
 {"type": "response_complete", "full_text": "The temperature is 72°F."}
-{"type": "audio_level", "level": 0.73}
-{"type": "face_data", "gaze": [0.4, 0.6], "pose": {"pitch": 5, "yaw": -2}}
+{"type": "audio_level", "level": 0.73, "data": {"level": 0.73, "source": "mic"}}
+{"type": "face_data", "gaze": [0.4, 0.6], "pose": {"pitch": 5, "yaw": -2}, "attention": true}
+{"type": "face_telemetry", ...}
 {"type": "plugin_loaded", "name": "whisper_local", "type": "stt"}
+{"type": "system_telemetry", "data": {"cpu": {...}, "gpu": {...}, "memory": {...}, "disk": {...}, "network": {...}, "uptime": {...}, "os": {...}, "weather": {...}}}
+{"type": "weather_telemetry", "data": {"city": "...", "temp_c": 24, "condition": "..."}}
+{"type": "settings_response", "settings": {"voice": {...}, "brain": {...}, "activation": {...}, "appearance": {...}, "vision": {...}, "sfx": {...}}}
+{"type": "config_updated", "namespace": "appearance", "key": "core_variant", "value": "particle_orb"}
+{"type": "connection", "connected": true}
+{"type": "latency", "latencyMs": 12}
 {"type": "error", "message": "Ollama connection refused"}
 ```
 
 ### Frontend → Backend
 
 ```json
-{"type": "command", "action": "activate"}
-{"type": "command", "action": "deactivate"}
+{"type": "activate"}  or  {"type": "command", "action": "activate"}
+{"type": "deactivate"}  or  {"type": "command", "action": "deactivate"}
 {"type": "config_update", "plugin": "llm", "key": "model", "value": "llama3"}
+{"type": "settings_save", "settings": {"voice": {...}, ...}}
 {"type": "settings_request"}
-{"type": "ping"}
+{"type": "telemetry_request"}
+{"type": "weather_request"}
+{"type": "ping", "data": {"timestamp": 1234}}
 ```
 
 ---
@@ -396,21 +445,22 @@ JSON messages over localhost:8765.
 
 ## Testing Strategy
 
-- **Unit tests**: plugin interface, event bus, config loader
+- **Unit tests**: plugin interface, event bus, config loader, system monitor, all built-in plugins
+- **Adversarial tests**: `backend/tests/adversarial/` — malformed WebSocket payloads, error routing, plugin manager isolation, config edge cases
 - **Integration tests**: voice pipeline end-to-end (mock audio)
 - **E2E tests**: WebSocket message flow between Python and Electron
 - **Manual tests**: HUD animations, sound sync, activation methods
 - **Performance tests**: memory profiling, CPU usage over time
-
----
 
 ## Implementation Order
 
 1. **Phase 1 — Skeleton**: Electron app + Python WebSocket server + basic HUD
 2. **Phase 2 — Plugin system**: Plugin interface, manager, config loader
 3. **Phase 3 — Voice core**: STT + TTS + LLM plugins (Ollama + Piper + Whisper)
-4. **Phase 4 — Activation**: All four methods (PTT, hotword, clap, gesture)
-5. **Phase 5 — HUD polish**: ARC reactor, particles, waveforms, themes
-6. **Phase 6 — Face tracking**: MediaPipe integration, gaze, helmet boot
-7. **Phase 7 — SFX & settings**: Sound synthesis, settings panel, theme system
-8. **Phase 8 — Packaging**: electron-builder, setup script, README
+4. **Phase 4 — Activation**: PTT + double-clap detector
+5. **Phase 5 — HUD polish**: ARC reactor, particles, waveform, SFX synthesizer
+6. **Phase 6 — Face tracking**: MediaPipe integration, gaze telemetry
+7. **Phase 7 — SFX & settings**: Sound synthesis, settings panel
+8. **Phase 8 — Packaging**: setup script, dev script, README
+
+**Post-planty extensions (shipped):** real wired audio pipeline + adaptive VAD, system telemetry HUD, weather & location, 3D Particle Orb core variant, config persistence/sync, adversarial test suites.

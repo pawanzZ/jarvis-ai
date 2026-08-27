@@ -9,9 +9,11 @@
 ## ⚡ Key Features
 
 - **Voice-First Interaction & Multi-Modal Activation**:
+  - **Wired real audio pipeline** — actual microphone streaming (SoundDevice) with noise-adaptive VAD (noise-floor tracking, hangover windows, pre-buffering to avoid utterance clipping), live Whisper STT, and neural TTS playback.
   - Hands-free Voice Activity Detection (VAD).
   - Push-to-Talk (PTT) with configurable keybinds and hold/toggle modes.
   - Double-clap acoustic pattern detector for hands-free activation.
+  - ALSA mic gain normalization and automatic Ollama model detection.
 - **Pluggable Local-First AI Backends**:
   - **STT**: Whisper local inference (`faster-whisper` / `whisper.cpp`) with streaming partial transcripts and offline fallback.
   - **TTS**: Piper neural speech synthesis (`piper-tts` / `speech-dispatcher`) with live audio streaming.
@@ -19,10 +21,14 @@
   - **Vision**: MediaPipe Face Mesh for head pose estimation, gaze tracking, and attention telemetry.
 - **Iron Man Holographic HUD (Electron + TypeScript)**:
   - Multi-ring Canvas & CSS ARC Reactor core with state-reactive rotational speeds, pulsing gradients, and color transitions.
+  - **Switchable 3D Particle Orb core** — ~1,350 Fibonacci-distributed particles with perspective projection on a rigid sphere that never changes shape, with only a few randomly-pulsing dots (`V` key, toolbar, or Settings to switch; preference persists).
   - 64-bar real-time audio waveform visualizer.
   - State-reactive ambient floating particle system.
+  - **Live System Monitor HUD** — real-time CPU, GPU, RAM, Disk, Network, OS/kernel/hostname, and system & session uptime telemetry, rendered with Iron Man HUD aesthetics.
+  - **Weather, location & digital clock** in the status bar (fetched live from `wttr.in` with network fallback).
   - Live streaming transcript bar with speaker indicators.
   - Slide-out Settings drawer panel for real-time configuration tuning.
+  - Keyboard shortcuts: `V` = toggle core variant, `Space` = PTT, `F2`/`Ctrl+S` = Settings, `Escape` = close.
 - **Zero-Dependency Procedural SFX Synthesizer**:
   - Pure Web Audio API synthesized sound effects: power-up sweeps, acoustic chimes, harmonic background hums, and error buzzes.
 - **Robust Async Architecture**:
@@ -39,7 +45,9 @@
 |                             Electron HUD Frontend                            |
 |  - Fullscreen transparent window (Iron Man Holographic HUD)                   |
 |  - Multi-ring ARC Reactor Canvas & CSS animations (IDLE/LISTENING/THINKING...) |
+|  - Switchable 3D Particle Orb core visualizer                                 |
 |  - Audio Waveform Visualizer & Particle System Canvas                         |
+|  - System Monitor HUD (CPU/GPU/RAM/Disk/Network) & Weather/Clock status bar  |
 |  - Status Bar, Streaming Transcript Bar, Settings Overlay Panel               |
 |  - Web Audio API Procedural SFX Synthesizer (0 audio asset dependencies)      |
 +---------------------------------------^---------------------------------------+
@@ -53,18 +61,21 @@
 |  +------------------------------------^------------------------------------+  |
 |                                       | Internal Events & State Updates       |
 |  +------------------------------------v------------------------------------+  |
-|  |                            Plugin Manager                               |  |
-|  |   Base Plugin Interface (start, stop, on_event, get_schema)              |  |
-|  |   Builtin Plugins:                                                      |  |
-|  |     - STT: Whisper (Local whisper.cpp / faster-whisper / mock)          |  |
-|  |     - TTS: Piper (Local piper-tts / speech-dispatcher / mock)          |  |
-|  |     - LLM: Ollama (Local llama3 / mock offline fallback)               |  |
-|  |     - Activation: Push-to-Talk (Global shortcut / hold & toggle)        |  |
-|  |     - Activation: Double-Clap Detector (Energy & peak interval analysis)|  |
-|  |     - Vision: Face Tracker (MediaPipe Face Mesh telemetry / mock)       |  |
+|                            Plugin Manager                               |  |
+|   Base Plugin Interface (start, stop, on_event, get_schema)              |  |
+|   Builtin Plugins:                                                      |  |
+|     - STT: Whisper (Local whisper.cpp / faster-whisper / mock)          |  |
+|     - TTS: Piper (Local piper-tts / speech-dispatcher / mock)          |  |
+|     - LLM: Ollama (Local llama3 / mock offline fallback)               |  |
+|     - Activation: Push-to-Talk (Global shortcut / hold & toggle)        |  |
+|     - Activation: Double-Clap Detector (Energy & peak interval analysis)|  |
+|     - Vision: Face Tracker (MediaPipe Face Mesh telemetry / mock)       |  |
 |  +-------------------------------------------------------------------------+  |
 |  |                            Audio Subsystem                              |  |
 |  |   MicStream (SoundDevice/PyAudio) | SpeakerOutput | VAD (Energy/Silero) |  |
+|  +-------------------------------------------------------------------------+  |
+|  |                            System Monitor                               |  |
+|  |   CPU/GPU/Mem/Disk/Network via /proc + psutil (optional) | Weather wttr.in|  |
 |  +-------------------------------------------------------------------------+  |
 +-------------------------------------------------------------------------------+
 ```
@@ -127,9 +138,12 @@ The `PluginManager` dynamically discovers plugins from `backend/jarvis/plugins/b
 ### 3. Electron Holographic HUD Visualizer
 The frontend is built with Electron and TypeScript:
 - **ARC Reactor Core**: Multi-ring visualizer with customizable speeds and pulsing states.
+- **Particle Orb Core**: Switchable 3D particle orb (Fibonacci-distributed point cloud on a rigid sphere with a few randomly-pulsing dots) — toggle with `V`.
+- **System Monitor HUD**: Live CPU/GPU/RAM/Disk/Network bars, OS/kernel/hostname, and uptime, driven by `system_telemetry` WebSocket events.
+- **Status Bar**: Digital clock, location & live weather, and connection/latency indicators.
 - **Waveform Canvas**: 64-band audio spectrum reacting to both microphone input and TTS playback.
 - **Particle System Engine**: Floating HUD particles that adjust density and speed according to system state (30 in `idle`, 60 in `listening`, 80 in `thinking`, 100 in `speaking`).
-- **Settings Overlay**: Slide-out drawer panel enabling instant runtime adjustments to models, voice rates, temperatures, themes, and audio thresholds without restarting.
+- **Settings Overlay**: Slide-out drawer panel enabling instant runtime adjustments to models, voice rates, temperatures, themes, core variant, and audio thresholds without restarting.
 
 ### 4. Procedural SFX Synthesizer
 Jarvis features an Iron Man-themed procedural sound engine written using the Web Audio API:
@@ -220,22 +234,29 @@ Jarvis AI provides both modular JSON configuration namespaces in `config/` and a
 ```
 config/
 ├── default.yaml            # Master reference configuration
-├── core.json               # Backend host, port, logging, default state
+├── core.json               # Backend host, port, sample/chunk rate, logging, theme
+├── voice.json              # STT/TTS plugin selection, voice, rate, sensitivity, volume
+├── brain.json              # LLM plugin, model, temperature, max tokens, system prompt
+├── activation.json         # Wake word, PTT (key/mode), clap toggles
+├── appearance.json         # Theme, core variant, particle density, CRTs, glow, ui scale
+├── vision.json             # Camera index, face tracking / gaze / helmet boot toggles
+├── sfx.json                # Master volume + per-SFX enable toggles
 ├── plugins/
-│   ├── whisper.json        # Whisper STT model & language
-│   ├── piper.json          # Piper TTS voice, rate & sample rate
-│   ├── ollama.json         # Ollama model name & endpoint URL
+│   ├── whisper_local.json  # Whisper STT model & language
+│   ├── piper_tts.json      # Piper TTS voice, rate & sample rate
+│   ├── ollama_llm.json     # Ollama model name & endpoint URL
 │   ├── push_to_talk.json   # Keybind and mode (hold/toggle)
 │   ├── clap_detector.json  # Audio peak threshold & window
 │   └── face_tracker.json   # Camera index & confidence threshold
 └── themes/
-    └── iron_man.json       # HUD color palette, ring speeds & particle density
+    ├── arc-reactor.json    # HUD color palette & ring speeds
+    └── iron_man.json       # HUD particle density & accent colors
 ```
 
 ### Runtime Updates
 You can update configuration live through:
-1. **The HUD Settings Panel**: Open settings (`Ctrl+,` or click the settings cog) to update values. Changes are synced over WebSocket immediately.
-2. **WebSocket Message**: Send a `config_update` event:
+1. **The HUD Settings Panel**: Open settings (`F2`, `Ctrl+S`, or click the settings cog) to update values. Changes are saved to the matching JSON namespace and broadcast (`config_updated`) so all clients stay in sync.
+2. **WebSocket Message**: Send a `config_update` / `settings_save` event:
    ```json
    {
      "type": "config_update",
@@ -250,11 +271,17 @@ You can update configuration live through:
 ## 🧪 Testing & Verification
 
 ### Run Backend Unit Tests (Pytest)
-Run all 12 test suites covering EventBus, StateMachine, Config, WebSocket Server, Audio, and all built-in Plugins:
+Run all test suites covering EventBus, StateMachine, Config, WebSocket Server, Audio, all built-in Plugins, System Monitor, plus the adversarial suite (malformed WS payloads, plugin error isolation, config edge cases):
 
 ```bash
 cd backend
 python3 -m pytest tests/ -v
+```
+
+### Run Adversarial Tests Only
+```bash
+cd backend
+python3 -m pytest tests/adversarial/ -v
 ```
 
 ### Build & Type-Check Frontend

@@ -1,8 +1,8 @@
 /**
- * Jarvis AI - Perplexity-style 3D Particle Orb Visualizer
- * Renders a 3D revolving point-cloud spherical visualizer with
- * Fibonacci distribution, 3D perspective projection, harmonic surface turbulence,
- * and audio-reactive acoustic ripple deformation.
+ * Jarvis AI - 3D Particle Orb Visualizer
+ * Renders a 3D revolving point-cloud sphere with Fibonacci distribution and
+ * 3D perspective projection. The sphere surface stays rigid at all times;
+ * only a small random subset of its dots pulse gently in place.
  */
 
 import { JarvisState } from "../core/types";
@@ -22,10 +22,11 @@ interface Point3D {
   scale: number;
   alpha: number;
   size: number;
-  // Harmonic vibration attributes
+  // Pulse attributes (only a few dots pulse)
   phase: number;
   freq: number;
   baseSize: number;
+  pulsing: boolean;
 }
 
 export class ParticleOrbVisualizer {
@@ -97,6 +98,7 @@ export class ParticleOrbVisualizer {
         phase: Math.random() * Math.PI * 2.0,
         freq: 0.8 + Math.random() * 0.8,
         baseSize: 1.1 + Math.random() * 1.3,
+        pulsing: Math.random() < 0.12,
       });
     }
   }
@@ -148,42 +150,42 @@ export class ParticleOrbVisualizer {
     // Smooth audio level interpolation
     this.currentAudioLevel += (this.targetAudioLevel - this.currentAudioLevel) * 0.25;
 
-    // Dynamic rotation speeds & deformation parameters by state
+    // Dynamic rotation speeds & pulse parameters by state
     let rotSpeedY = 0.008;
     let rotSpeedX = 0.002;
-    let turbulenceAmp = 0.07;
     let pulseSpeed = 1.8;
+    let pulseAmp = 1.0;
 
     switch (this.state) {
       case "idle":
         rotSpeedY = 0.006;
         rotSpeedX = 0.0015;
-        turbulenceAmp = 0.05 + this.currentAudioLevel * 0.15;
         pulseSpeed = 1.4;
+        pulseAmp = 0.9;
         break;
       case "listening":
         rotSpeedY = 0.014;
         rotSpeedX = 0.004;
-        turbulenceAmp = 0.12 + this.currentAudioLevel * 0.45;
         pulseSpeed = 2.8;
+        pulseAmp = 1.6;
         break;
       case "thinking":
         rotSpeedY = 0.038; // Rapid energetic vortex
         rotSpeedX = 0.012;
-        turbulenceAmp = 0.18;
-        pulseSpeed = 5.0;
+        pulseSpeed = 4.5;
+        pulseAmp = 2.2;
         break;
       case "speaking":
         rotSpeedY = 0.016;
         rotSpeedX = 0.003;
-        turbulenceAmp = 0.14 + this.currentAudioLevel * 0.50;
-        pulseSpeed = 3.5;
+        pulseSpeed = 3.2;
+        pulseAmp = 1.8;
         break;
       case "error":
         rotSpeedY = 0.025;
         rotSpeedX = 0.015;
-        turbulenceAmp = 0.25;
-        pulseSpeed = 6.0;
+        pulseSpeed = 5.0;
+        pulseAmp = 2.6;
         break;
     }
 
@@ -206,17 +208,16 @@ export class ParticleOrbVisualizer {
     const cosX = Math.cos(this.rotX);
     const sinX = Math.sin(this.rotX);
 
-    // Dynamic breathing radius
-    const breathing = 1.0 + Math.sin(this.time * pulseSpeed) * 0.03 + this.currentAudioLevel * 0.18;
-    const currentRadius = this.baseRadius * breathing;
+    // Rigid sphere radius stays fixed (shape never changes)
+    const currentRadius = this.baseRadius;
 
     const cameraDist = 480;
     const color = this.stateColors[this.state] || this.stateColors.idle;
 
     // Ambient center core glow
-    const coreGlowRadius = currentRadius * (0.45 + this.currentAudioLevel * 0.3);
+    const coreGlowRadius = currentRadius * 0.5;
     const coreGradient = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, coreGlowRadius);
-    coreGradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.18 + this.currentAudioLevel * 0.2})`);
+    coreGradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 0.16)`);
     coreGradient.addColorStop(0.5, `rgba(${color.r}, ${color.g}, ${color.b}, 0.05)`);
     coreGradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
@@ -225,22 +226,14 @@ export class ParticleOrbVisualizer {
     this.ctx.arc(cx, cy, coreGlowRadius, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 1. Transform & Project All Particles
+    // 1. Transform & Project All Particles (points stay fixed on the sphere surface)
     for (let i = 0; i < this.numParticles; i++) {
       const p = this.particles[i];
 
-      // Multi-harmonic acoustic surface deformation
-      const wave1 = Math.sin(this.time * 2.5 + p.nx * 4.0 + p.phase);
-      const wave2 = Math.cos(this.time * 3.2 + p.ny * 5.0 + p.nz * 3.0);
-      const acousticRipple = Math.sin(p.nz * 7.0 - this.time * 8.0) * this.currentAudioLevel * 0.35;
-
-      const displacement = 1.0 + (wave1 * 0.6 + wave2 * 0.4) * turbulenceAmp + acousticRipple;
-      const r = currentRadius * displacement;
-
-      // 3D coordinates before rotation
-      const x0 = p.nx * r;
-      const y0 = p.ny * r;
-      const z0 = p.nz * r;
+      // 3D coordinates on the rigid sphere surface
+      const x0 = p.nx * currentRadius;
+      const y0 = p.ny * currentRadius;
+      const z0 = p.nz * currentRadius;
 
       // Rotation around Y axis
       const x1 = x0 * cosY + z0 * sinY;
@@ -268,8 +261,16 @@ export class ParticleOrbVisualizer {
       const normZ = (z2 + currentRadius) / (currentRadius * 2.0); // 0 (far) to 1 (near)
       const clampedZ = Math.max(0.0, Math.min(1.0, normZ));
 
-      p.alpha = 0.15 + clampedZ * 0.82;
-      p.size = p.baseSize * scale * (0.8 + clampedZ * 0.7);
+      // Only a few randomly-chosen dots pulse; the rest hold a stable size/alpha.
+      if (p.pulsing) {
+        const pulse = 0.5 + 0.5 * Math.sin(this.time * p.freq * pulseSpeed + p.phase * Math.PI * 2.0);
+        const boost = 1.0 + pulse * pulseAmp * 0.25;
+        p.alpha = (0.2 + clampedZ * 0.8) * (0.7 + pulse * 0.5);
+        p.size = p.baseSize * 1.3 * boost * scale * (0.8 + clampedZ * 0.7);
+      } else {
+        p.alpha = 0.18 + clampedZ * 0.82;
+        p.size = p.baseSize * scale * (0.8 + clampedZ * 0.7);
+      }
     }
 
     // 2. Sort by depth (far particles first, near particles in front)
