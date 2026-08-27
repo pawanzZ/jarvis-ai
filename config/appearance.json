@@ -1,6 +1,6 @@
 {
-  "theme": "stealth",
-  "particleDensity": 60,
+  "theme": "matrix",
+  "particleDensity": 30,
   "crtScanlines": true,
   "glowIntensity": 1,
   "uiScale": 1,
