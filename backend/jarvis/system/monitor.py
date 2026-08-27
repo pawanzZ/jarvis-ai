@@ -6,8 +6,19 @@ import platform
 import shutil
 import socket
 import time
+import urllib.parse
 import urllib.request
 from typing import Any, Optional
+
+_default_monitor: Optional[SystemMonitor] = None
+
+
+def get_system_monitor() -> SystemMonitor:
+    """Get the active or singleton SystemMonitor instance."""
+    global _default_monitor
+    if _default_monitor is None:
+        _default_monitor = SystemMonitor()
+    return _default_monitor
 
 
 class SystemMonitor:
@@ -17,6 +28,8 @@ class SystemMonitor:
     """
 
     def __init__(self) -> None:
+        global _default_monitor
+        _default_monitor = self
         self.session_start_time: float = time.time()
         self._prev_cpu_times: Optional[tuple[float, float]] = None
         self._prev_net_bytes: Optional[tuple[int, int, float]] = None
@@ -381,6 +394,44 @@ class SystemMonitor:
         if data:
             self._cached_weather = data
         return self._cached_weather
+
+    async def fetch_weather_for_city(self, city_name: str) -> dict[str, Any]:
+        """Fetch real-time weather for a specific named city using Open APIs."""
+        loop = asyncio.get_running_loop()
+
+        def _fetch_city() -> dict[str, Any]:
+            encoded = urllib.parse.quote(city_name.strip())
+            try:
+                url = f"https://wttr.in/{encoded}?format=j1"
+                req = urllib.request.Request(url, headers={"User-Agent": "curl/8.0 (JarvisAI-HUD)"})
+                with urllib.request.urlopen(req, timeout=3.5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    if data and "current_condition" in data:
+                        current = data["current_condition"][0]
+                        area = data.get("nearest_area", [{}])[0]
+                        c_name = area.get("areaName", [{}])[0].get("value", city_name)
+                        r_name = area.get("region", [{}])[0].get("value", "")
+                        country = area.get("country", [{}])[0].get("value", "")
+                        t_c = int(current.get("temp_C", 24))
+                        return {
+                            "city": c_name.upper(),
+                            "region": r_name.upper(),
+                            "country": country.upper(),
+                            "temp_c": t_c,
+                            "temp_f": int(current.get("temp_F", round(t_c * 9 / 5 + 32))),
+                            "feels_like_c": int(current.get("FeelsLikeC", t_c)),
+                            "condition": current.get("weatherDesc", [{}])[0].get("value", "FAIR").upper(),
+                            "humidity": int(current.get("humidity", 50)),
+                            "wind_kmph": int(current.get("windspeedKmph", 10)),
+                            "lat": self._user_lat,
+                            "lon": self._user_lon,
+                            "last_updated": time.time(),
+                        }
+            except Exception:
+                pass
+            return self.get_weather_telemetry()
+
+        return await loop.run_in_executor(None, _fetch_city)
 
     async def fetch_airspace_flights(self) -> list[dict[str, Any]]:
         """Fetch real-time ADS-B aircraft positions from OpenSky Network open API."""

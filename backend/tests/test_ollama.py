@@ -74,6 +74,16 @@ async def test_ollama_offline_conversational_queries():
     hello_tokens = [t async for t in plugin.generate_stream("hello jarvis")]
     assert "Greetings" in "".join(hello_tokens) or "assist" in "".join(hello_tokens).lower()
 
+    # Test real-time weather query using OS location and weather API
+    weather_tokens = [t async for t in plugin.generate_stream("what is the weather outside?")]
+    weather_resp = "".join(weather_tokens).lower()
+    assert any(w in weather_resp for w in ("atmospheric", "conditions", "temperature", "°c", "degrees", "humidity", "wind"))
+
+    # Test OS location query
+    loc_tokens = [t async for t in plugin.generate_stream("where am i right now?")]
+    loc_resp = "".join(loc_tokens).lower()
+    assert any(w in loc_resp for w in ("geolocation", "stationed", "india", "hyderabad", "coordinates", "sector"))
+
     await plugin.stop()
 
 
