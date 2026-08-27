@@ -4,6 +4,10 @@
 
 **Jarvis AI** is a voice-interactive, local-first desktop AI assistant inspired by the JARVIS system from Marvel's Iron Man. It features a full-screen, transparent holographic HUD visualizer, real-time multi-ring ARC Reactor animation, audio waveform visualization, floating ambient particle systems, and pluggable local/cloud AI backends (STT, TTS, LLM, Vision, and Activation triggers).
 
+<div align="center">
+  <img src="jarvis_pawanzZ.png" alt="Jarvis AI Holographic HUD" width="850">
+</div>
+
 ---
 
 ## ⚡ Key Features
