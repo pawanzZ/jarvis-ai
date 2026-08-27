@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="hud/fusion-core.css">
   <link rel="stylesheet" href="hud/particle-orb.css">
   <link rel="stylesheet" href="hud/cyber-widgets.css">
+  <link rel="stylesheet" href="hud/corner-pods.css">
   <link rel="stylesheet" href="hud/panels/settings.css">
 </head>
 <body>
@@ -218,6 +219,52 @@
         <canvas class="canvas-layer" id="particle-canvas"></canvas>
         <canvas class="canvas-layer" id="waveform-canvas"></canvas>
         <div class="hud-reticle"></div>
+
+        <!-- Center Viewport Corner Pods (Tony Stark Battle-Station) -->
+        <!-- Corner Pod 1: Iron Man Holographic Mask -->
+        <div class="hud-corner-pod pod-top-left">
+          <div class="corner-pod-header">
+            <span>HELMET HUD // MK-85</span>
+            <div class="pod-status-indicator"><span class="pod-dot"></span>OPTICS</div>
+          </div>
+          <div class="corner-pod-body">
+            <canvas id="ironman-mask-canvas" width="220" height="136"></canvas>
+          </div>
+        </div>
+
+        <!-- Corner Pod 2: Real-Time Optical / Video Feed -->
+        <div class="hud-corner-pod pod-top-right">
+          <div class="corner-pod-header">
+            <span>OPTICAL SENSOR 01</span>
+            <div class="pod-status-indicator" style="color: var(--accent-cyan);"><span class="pod-dot"></span>LIVE</div>
+          </div>
+          <div class="corner-pod-body">
+            <video id="hud-camera-video" autoplay playsinline muted></video>
+            <canvas id="camera-hud-canvas" width="220" height="136"></canvas>
+          </div>
+        </div>
+
+        <!-- Corner Pod 3: Subsystem Script Runner -->
+        <div class="hud-corner-pod pod-bottom-left">
+          <div class="corner-pod-header">
+            <span>SUBSYSTEM DAEMONS</span>
+            <div class="pod-status-indicator" style="color: var(--accent-gold);"><span class="pod-dot" style="background: var(--accent-gold); box-shadow: 0 0 6px var(--accent-gold);"></span>EXEC</div>
+          </div>
+          <div class="corner-pod-body">
+            <div class="script-terminal-logs"></div>
+          </div>
+        </div>
+
+        <!-- Corner Pod 4: Tactical Airspace Flight Tracker -->
+        <div class="hud-corner-pod pod-bottom-right">
+          <div class="corner-pod-header">
+            <span>AIRSPACE RADAR // ADS-B</span>
+            <div class="pod-status-indicator"><span class="pod-dot"></span>NORAD-4</div>
+          </div>
+          <div class="corner-pod-body">
+            <canvas id="flight-tracker-canvas" width="240" height="126"></canvas>
+          </div>
+        </div>
 
         <div id="core-viewport">
           <!-- Celestial Fusion Plasma Core Canvas (Reference 2) -->
@@ -460,6 +507,22 @@
   <script>window.__loadModule('spinning-globe', function() {});</script>
   <script src="hud/spinning-globe.js"></script>
   <script>window.__exportsMap['spinning-globe'] = window.exports;</script>
+
+  <script>window.__loadModule('ironman-mask', function() {});</script>
+  <script src="hud/ironman-mask.js"></script>
+  <script>window.__exportsMap['ironman-mask'] = window.exports;</script>
+
+  <script>window.__loadModule('camera-hud', function() {});</script>
+  <script src="hud/camera-hud.js"></script>
+  <script>window.__exportsMap['camera-hud'] = window.exports;</script>
+
+  <script>window.__loadModule('script-runner', function() {});</script>
+  <script src="hud/script-runner.js"></script>
+  <script>window.__exportsMap['script-runner'] = window.exports;</script>
+
+  <script>window.__loadModule('flight-tracker', function() {});</script>
+  <script src="hud/flight-tracker.js"></script>
+  <script>window.__exportsMap['flight-tracker'] = window.exports;</script>
 
   <script>window.__loadModule('app', function() {});</script>
   <script src="core/app.js"></script>

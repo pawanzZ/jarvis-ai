@@ -37,6 +37,10 @@ import { FusionCoreVisualizer } from "../hud/fusion-core";
 import { CyberGauges } from "../hud/cyber-gauges";
 import { TacticalRadar } from "../hud/tactical-radar";
 import { SpinningGlobe } from "../hud/spinning-globe";
+import { IronManMaskHUD } from "../hud/ironman-mask";
+import { CameraHUD } from "../hud/camera-hud";
+import { ScriptRunnerHUD } from "../hud/script-runner";
+import { FlightTrackerHUD } from "../hud/flight-tracker";
 import { SFXSynthesizer } from "../sfx/synthesizer";
 
 export class JarvisApp {
@@ -51,6 +55,10 @@ export class JarvisApp {
   private cyberGauges: CyberGauges | null = null;
   private tacticalRadar: TacticalRadar | null = null;
   private spinningGlobe: SpinningGlobe | null = null;
+  private ironmanMask: IronManMaskHUD | null = null;
+  private cameraHud: CameraHUD | null = null;
+  private scriptRunner: ScriptRunnerHUD | null = null;
+  private flightTracker: FlightTrackerHUD | null = null;
   private statusBar: StatusBar;
   private transcriptBar: TranscriptBar;
   private settingsPanel: SettingsPanel;
@@ -98,7 +106,21 @@ export class JarvisApp {
     const globeCanvas = document.getElementById("spinning-globe-canvas") as HTMLCanvasElement;
     if (globeCanvas) this.spinningGlobe = new SpinningGlobe(globeCanvas);
 
-    // 5. Initialize Status & Transcript bars
+    // 5. Initialize Center Corner Pods (Tony Stark Battle-Station)
+    const maskCanvas = document.getElementById("ironman-mask-canvas") as HTMLCanvasElement;
+    if (maskCanvas) this.ironmanMask = new IronManMaskHUD(maskCanvas);
+
+    const cameraVideo = document.getElementById("hud-camera-video") as HTMLVideoElement;
+    const cameraCanvas = document.getElementById("camera-hud-canvas") as HTMLCanvasElement;
+    if (cameraVideo && cameraCanvas) this.cameraHud = new CameraHUD(cameraVideo, cameraCanvas);
+
+    const scriptContainer = document.querySelector(".hud-corner-pod.pod-bottom-left") as HTMLElement;
+    if (scriptContainer) this.scriptRunner = new ScriptRunnerHUD(scriptContainer);
+
+    const flightCanvas = document.getElementById("flight-tracker-canvas") as HTMLCanvasElement;
+    if (flightCanvas) this.flightTracker = new FlightTrackerHUD(flightCanvas);
+
+    // 6. Initialize Status & Transcript bars
     const statusBarEl = document.getElementById("status-bar");
     if (!statusBarEl) throw new Error("Missing #status-bar");
     this.statusBar = new StatusBar(statusBarEl, {
@@ -189,6 +211,9 @@ export class JarvisApp {
       this.cyberGauges?.setAudioLevel(level);
       this.tacticalRadar?.setAudioLevel(level);
       this.spinningGlobe?.setAudioLevel(level);
+      this.ironmanMask?.setAudioLevel(level);
+      this.cameraHud?.setAudioLevel(level);
+      this.flightTracker?.setAudioLevel(level);
     });
 
     // Face Tracking Telemetry
@@ -274,6 +299,10 @@ export class JarvisApp {
     this.cyberGauges?.setState(newState);
     this.tacticalRadar?.setState(newState);
     this.spinningGlobe?.setState(newState);
+    this.ironmanMask?.setState(newState);
+    this.cameraHud?.setState(newState);
+    this.scriptRunner?.setState(newState);
+    this.flightTracker?.setState(newState);
     this.statusBar.setState(newState);
     this.transcriptBar.setState(newState);
 

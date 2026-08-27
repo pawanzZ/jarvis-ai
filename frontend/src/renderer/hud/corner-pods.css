@@ -1,0 +1,174 @@
+/**
+ * Jarvis AI - Center Viewport Corner Pods
+ * Positions and styles the 4 futuristic corner modules around the central core:
+ * 1. Top-Left: Iron Man Holographic Mask
+ * 2. Top-Right: Real-Time Optical / Video Feed
+ * 3. Bottom-Left: Subsystem Script Runner & Terminal Stream
+ * 4. Bottom-Right: Tactical Airspace Flight Tracker
+ */
+
+.hud-corner-pod {
+  position: absolute;
+  z-index: 25;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(6, 16, 36, 0.82) 100%);
+  border: 1px solid rgba(0, 180, 255, 0.28);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), inset 0 0 16px rgba(0, 180, 255, 0.06);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+/* Placements with 45-degree chamfered polygon edges */
+.hud-corner-pod.pod-top-left {
+  top: 14px;
+  left: 14px;
+  width: 220px;
+  height: 160px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+}
+
+.hud-corner-pod.pod-top-right {
+  top: 14px;
+  right: 14px;
+  width: 220px;
+  height: 160px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+
+.hud-corner-pod.pod-bottom-left {
+  bottom: 14px;
+  left: 14px;
+  width: 240px;
+  height: 150px;
+  clip-path: polygon(0 14px, 14px 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.hud-corner-pod.pod-bottom-right {
+  bottom: 14px;
+  right: 14px;
+  width: 240px;
+  height: 150px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+
+/* Pod Header Bar */
+.corner-pod-header {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 180, 255, 0.25);
+  background: rgba(0, 180, 255, 0.08);
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  color: var(--accent-cyan, #00d4ff);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.pod-status-indicator {
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pod-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-green, #00f5d4);
+  box-shadow: 0 0 6px var(--accent-green, #00f5d4);
+}
+
+/* Pod Canvas Body */
+.corner-pod-body {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: calc(100% - 24px);
+  overflow: hidden;
+}
+
+#ironman-mask-canvas,
+#camera-hud-canvas,
+#flight-tracker-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Video Element Layer for Camera Pod */
+#hud-camera-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+  filter: contrast(1.2) brightness(0.85) hue-rotate(185deg);
+  z-index: 1;
+}
+
+#camera-hud-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+/* Script Runner Terminal Body */
+.script-terminal-logs {
+  width: 100%;
+  height: 100%;
+  padding: 6px 8px;
+  overflow: hidden;
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.script-log-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+  animation: log-fade-in 0.2s ease;
+}
+
+@keyframes log-fade-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.log-time {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 7.5px;
+}
+
+.log-tag {
+  font-weight: bold;
+  font-size: 8px;
+}
+
+.log-tag.tag-cyan { color: #00d4ff; }
+.log-tag.tag-green { color: #00f5d4; }
+.log-tag.tag-gold { color: #ffd700; }
+.log-tag.tag-red { color: #ff4757; }
+
+.log-cmd {
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
