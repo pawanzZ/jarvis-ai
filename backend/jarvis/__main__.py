@@ -412,6 +412,23 @@ async def main() -> None:
                 print(f"[Jarvis] Weather worker error: {e}")
                 await asyncio.sleep(60)
 
+    async def airspace_worker() -> None:
+        while True:
+            try:
+                flights = await system_monitor.fetch_airspace_flights()
+                if flights:
+                    await server.broadcast({
+                        "type": "flight_telemetry",
+                        "data": flights,
+                    })
+                # Query real-time airspace every 20 seconds
+                await asyncio.sleep(20)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[Jarvis] Airspace worker error: {e}")
+                await asyncio.sleep(30)
+
     print("Jarvis backend starting...")
 
     # Spawn background tasks
@@ -419,6 +436,7 @@ async def main() -> None:
     audio_task = asyncio.create_task(audio_worker())
     telemetry_task = asyncio.create_task(telemetry_worker())
     weather_task = asyncio.create_task(weather_worker())
+    airspace_task = asyncio.create_task(airspace_worker())
 
     try:
         await server.start()
@@ -427,6 +445,7 @@ async def main() -> None:
         audio_task.cancel()
         telemetry_task.cancel()
         weather_task.cancel()
+        airspace_task.cancel()
         await mic.stop()
         speaker.stop()
         await plugin_mgr.stop_all()

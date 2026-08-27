@@ -255,6 +255,17 @@ class WSServer:
                         pass
                 else:
                     await self.broadcast(resp)
+        elif msg_type == "flight_request":
+            if self.system_monitor:
+                flights = self.system_monitor.get_airspace_telemetry()
+                resp = {"type": "flight_telemetry", "data": flights}
+                if ws is not None:
+                    try:
+                        await ws.send(json.dumps(resp))
+                    except websockets.ConnectionClosed:
+                        pass
+                else:
+                    await self.broadcast(resp)
 
     async def broadcast(self, data: dict[str, Any]) -> None:
         message = json.dumps(data)

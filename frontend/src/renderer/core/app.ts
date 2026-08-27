@@ -35,7 +35,7 @@ import { SystemMonitorHUD } from "../hud/system-monitor";
 import { ParticleOrbVisualizer } from "../hud/particle-orb";
 import { FusionCoreVisualizer } from "../hud/fusion-core";
 import { CyberGauges } from "../hud/cyber-gauges";
-import { TacticalRadar } from "../hud/tactical-radar";
+import { NeuralBrainHUD } from "../hud/neural-brain";
 import { SpinningGlobe } from "../hud/spinning-globe";
 import { IronManMaskHUD } from "../hud/ironman-mask";
 import { CameraHUD } from "../hud/camera-hud";
@@ -53,7 +53,7 @@ export class JarvisApp {
   private waveform: Waveform;
   private particles: ParticleSystem;
   private cyberGauges: CyberGauges | null = null;
-  private tacticalRadar: TacticalRadar | null = null;
+  private neuralBrain: NeuralBrainHUD | null = null;
   private spinningGlobe: SpinningGlobe | null = null;
   private ironmanMask: IronManMaskHUD | null = null;
   private cameraHud: CameraHUD | null = null;
@@ -100,8 +100,8 @@ export class JarvisApp {
     const gaugesCanvas = document.getElementById("cyber-gauges-canvas") as HTMLCanvasElement;
     if (gaugesCanvas) this.cyberGauges = new CyberGauges(gaugesCanvas);
 
-    const radarCanvas = document.getElementById("tactical-radar-canvas") as HTMLCanvasElement;
-    if (radarCanvas) this.tacticalRadar = new TacticalRadar(radarCanvas);
+    const brainCanvas = document.getElementById("neural-brain-canvas") as HTMLCanvasElement;
+    if (brainCanvas) this.neuralBrain = new NeuralBrainHUD(brainCanvas);
 
     const globeCanvas = document.getElementById("spinning-globe-canvas") as HTMLCanvasElement;
     if (globeCanvas) this.spinningGlobe = new SpinningGlobe(globeCanvas);
@@ -180,6 +180,7 @@ export class JarvisApp {
     this.ws.on("transcript_stream", (msg: TranscriptStreamEvent) => {
       const token = msg.token || msg.data?.token || "";
       this.transcriptBar.appendToken(token);
+      this.neuralBrain?.onToken();
     });
 
     // Final Transcripts
@@ -193,12 +194,19 @@ export class JarvisApp {
     this.ws.on("llm_token", (msg: LLMTokenEvent) => {
       const token = msg.token || msg.data?.token || "";
       this.transcriptBar.appendToken(token);
+      this.neuralBrain?.onToken();
     });
 
     // Response Complete
     this.ws.on("response_complete", (msg: ResponseCompleteEvent) => {
       const fullText = msg.full_text || msg.data?.full_text || "";
       this.transcriptBar.completeResponse(fullText);
+    });
+
+    // Real-time Flight Telemetry (OpenSky Network Open API)
+    this.ws.on("flight_telemetry", (msg: any) => {
+      const flights = msg.data || [];
+      this.flightTracker?.updateRealFlights(flights);
     });
 
     // Audio Level Telemetry
@@ -209,7 +217,7 @@ export class JarvisApp {
       this.fusionCore?.setAudioLevel(level);
       this.orbVisualizer.setAudioLevel(level);
       this.cyberGauges?.setAudioLevel(level);
-      this.tacticalRadar?.setAudioLevel(level);
+      this.neuralBrain?.setAudioLevel(level);
       this.spinningGlobe?.setAudioLevel(level);
       this.ironmanMask?.setAudioLevel(level);
       this.cameraHud?.setAudioLevel(level);
@@ -262,6 +270,9 @@ export class JarvisApp {
         if (data.weather) {
           this.statusBar.setWeather(data.weather);
         }
+        if (data.flights) {
+          this.flightTracker?.updateRealFlights(data.flights);
+        }
       }
     });
 
@@ -297,7 +308,7 @@ export class JarvisApp {
     this.waveform.setState(newState);
     this.particles.setState(newState);
     this.cyberGauges?.setState(newState);
-    this.tacticalRadar?.setState(newState);
+    this.neuralBrain?.setState(newState);
     this.spinningGlobe?.setState(newState);
     this.ironmanMask?.setState(newState);
     this.cameraHud?.setState(newState);

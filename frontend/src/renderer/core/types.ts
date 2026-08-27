@@ -215,6 +215,7 @@ export interface SystemTelemetryData {
     hostname: string;
   };
   weather: WeatherTelemetryData;
+  flights?: any[];
   timestamp: number;
 }
 

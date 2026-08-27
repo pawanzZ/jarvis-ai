@@ -32,6 +32,9 @@ class SystemMonitor:
             "feels_like_c": 24,
             "last_updated": 0,
         }
+        self._user_lat: float = 17.3843
+        self._user_lon: float = 78.4583
+        self._cached_flights: list[dict[str, Any]] = []
         self._gpu_info: str = self._detect_gpu()
         self._os_info: dict[str, str] = self._detect_os_info()
 
@@ -270,56 +273,186 @@ class SystemMonitor:
         }
 
     async def fetch_weather_and_location(self) -> dict[str, Any]:
-        """Fetch real-time location and weather conditions asynchronously."""
+        """Fetch real-time location and weather conditions asynchronously using Open APIs."""
         loop = asyncio.get_running_loop()
 
-        def _fetch() -> Optional[dict[str, Any]]:
+        def _fetch_open_apis() -> Optional[dict[str, Any]]:
+            # 1. IP-API: free open geolocation endpoint
+            city = self._cached_weather.get("city", "HYDERABAD")
+            region = self._cached_weather.get("region", "TELANGANA")
+            country = self._cached_weather.get("country", "INDIA")
+            lat = self._user_lat
+            lon = self._user_lon
+
+            try:
+                ip_req = urllib.request.Request(
+                    "http://ip-api.com/json/",
+                    headers={"User-Agent": "JarvisAI-HUD/1.0"},
+                )
+                with urllib.request.urlopen(ip_req, timeout=2.5) as resp:
+                    ip_data = json.loads(resp.read().decode("utf-8"))
+                    if ip_data.get("status") == "success":
+                        city = ip_data.get("city", city)
+                        region = ip_data.get("regionName", region)
+                        country = ip_data.get("country", country)
+                        lat = float(ip_data.get("lat", lat))
+                        lon = float(ip_data.get("lon", lon))
+                        self._user_lat = lat
+                        self._user_lon = lon
+            except Exception:
+                pass
+
+            # 2. Open-Meteo: free open weather API (No API key needed)
+            wmo_map = {
+                0: "CLEAR SKY", 1: "MAINLY CLEAR", 2: "PARTLY CLOUDY", 3: "OVERCAST",
+                45: "FOG", 48: "DEPOSITING RIME FOG", 51: "LIGHT DRIZZLE", 53: "MODERATE DRIZZLE",
+                55: "DENSE DRIZZLE", 61: "SLIGHT RAIN", 63: "MODERATE RAIN", 65: "HEAVY RAIN",
+                71: "SLIGHT SNOW", 73: "MODERATE SNOW", 75: "HEAVY SNOW", 80: "SLIGHT SHOWERS",
+                81: "MODERATE SHOWERS", 82: "VIOLENT SHOWERS", 95: "THUNDERSTORM",
+            }
+
+            try:
+                meteo_url = (
+                    f"https://api.open-meteo.com/v1/forecast?latitude={lat:.4f}&longitude={lon:.4f}"
+                    f"&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+                )
+                meteo_req = urllib.request.Request(meteo_url, headers={"User-Agent": "JarvisAI-HUD/1.0"})
+                with urllib.request.urlopen(meteo_req, timeout=3.0) as resp:
+                    m_data = json.loads(resp.read().decode("utf-8"))
+                    curr = m_data.get("current", {})
+                    if curr:
+                        t_c = round(float(curr.get("temperature_2m", 24)))
+                        hum = round(float(curr.get("relative_humidity_2m", 50)))
+                        wind = round(float(curr.get("wind_speed_10m", 10)))
+                        w_code = int(curr.get("weather_code", 0))
+                        cond = wmo_map.get(w_code, "FAIR")
+
+                        return {
+                            "city": city.upper(),
+                            "region": region.upper(),
+                            "country": country.upper(),
+                            "temp_c": t_c,
+                            "temp_f": round(t_c * 9 / 5 + 32),
+                            "feels_like_c": t_c,
+                            "condition": cond,
+                            "humidity": hum,
+                            "wind_kmph": wind,
+                            "lat": lat,
+                            "lon": lon,
+                            "last_updated": time.time(),
+                        }
+            except Exception:
+                pass
+
+            # 3. Fallback: wttr.in
             try:
                 req = urllib.request.Request(
                     "https://wttr.in/?format=j1",
                     headers={"User-Agent": "curl/8.0 (JarvisAI-HUD)"},
                 )
-                with urllib.request.urlopen(req, timeout=3.5) as resp:
-                    return json.loads(resp.read().decode("utf-8"))
+                with urllib.request.urlopen(req, timeout=2.5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    if data and "current_condition" in data:
+                        current = data["current_condition"][0]
+                        area = data.get("nearest_area", [{}])[0]
+                        c_name = area.get("areaName", [{}])[0].get("value", city)
+                        r_name = area.get("region", [{}])[0].get("value", region)
+                        t_c = int(current.get("temp_C", 24))
+                        return {
+                            "city": c_name.upper(),
+                            "region": r_name.upper(),
+                            "country": country.upper(),
+                            "temp_c": t_c,
+                            "temp_f": int(current.get("temp_F", round(t_c * 9 / 5 + 32))),
+                            "feels_like_c": int(current.get("FeelsLikeC", t_c)),
+                            "condition": current.get("weatherDesc", [{}])[0].get("value", "Clear").upper(),
+                            "humidity": int(current.get("humidity", 50)),
+                            "wind_kmph": int(current.get("windspeedKmph", 10)),
+                            "lat": lat,
+                            "lon": lon,
+                            "last_updated": time.time(),
+                        }
             except Exception:
-                return None
+                pass
 
-        data = await loop.run_in_executor(None, _fetch)
+            return None
 
-        if data and "current_condition" in data:
-            try:
-                current = data["current_condition"][0]
-                area = data.get("nearest_area", [{}])[0]
-
-                city = area.get("areaName", [{}])[0].get("value", "Local Sector")
-                region = area.get("region", [{}])[0].get("value", "")
-                country = area.get("country", [{}])[0].get("value", "Earth")
-                temp_c = int(current.get("temp_C", 24))
-                temp_f = int(current.get("temp_F", 75))
-                feels_c = int(current.get("FeelsLikeC", temp_c))
-                condition = current.get("weatherDesc", [{}])[0].get("value", "Clear")
-                humidity = int(current.get("humidity", 50))
-                wind_kmph = int(current.get("windspeedKmph", 10))
-
-                self._cached_weather = {
-                    "city": city.upper(),
-                    "region": region.upper(),
-                    "country": country.upper(),
-                    "temp_c": temp_c,
-                    "temp_f": temp_f,
-                    "feels_like_c": feels_c,
-                    "condition": condition.upper(),
-                    "humidity": humidity,
-                    "wind_kmph": wind_kmph,
-                    "last_updated": time.time(),
-                }
-            except Exception as e:
-                print(f"[SystemMonitor] Weather parsing error: {e}")
-
+        data = await loop.run_in_executor(None, _fetch_open_apis)
+        if data:
+            self._cached_weather = data
         return self._cached_weather
+
+    async def fetch_airspace_flights(self) -> list[dict[str, Any]]:
+        """Fetch real-time ADS-B aircraft positions from OpenSky Network open API."""
+        loop = asyncio.get_running_loop()
+
+        def _fetch_opensky() -> list[dict[str, Any]]:
+            lat = self._user_lat
+            lon = self._user_lon
+            # +/- 4.5 degrees bounding box around user (~500km radius)
+            lamin = lat - 4.5
+            lamax = lat + 4.5
+            lomin = lon - 4.5
+            lomax = lon + 4.5
+
+            url = (
+                f"https://opensky-network.org/api/states/all?"
+                f"lamin={lamin:.2f}&lomin={lomin:.2f}&lamax={lamax:.2f}&lomax={lomax:.2f}"
+            )
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "JarvisAI-HUD/1.0"})
+                with urllib.request.urlopen(req, timeout=4.0) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+                    states = payload.get("states") or []
+                    flights = []
+
+                    for st in states[:16]:
+                        if not st or len(st) < 15:
+                            continue
+                        callsign = (st[1] or "").strip()
+                        if not callsign:
+                            callsign = f"FLT-{st[0][-4:].upper()}"
+
+                        f_lon = float(st[5]) if st[5] is not None else lon
+                        f_lat = float(st[6]) if st[6] is not None else lat
+                        alt_m = float(st[7]) if st[7] is not None else 8500.0
+                        vel_ms = float(st[9]) if st[9] is not None else 210.0
+                        heading_deg = float(st[10]) if st[10] is not None else 90.0
+                        squawk = str(st[14]) if st[14] is not None else "7700"
+
+                        # Normalized position relative to user position (-1.0 to 1.0)
+                        x_norm = max(-0.95, min(0.95, (f_lon - lon) / 4.5))
+                        y_norm = max(-0.95, min(0.95, (lat - f_lat) / 4.5))
+                        heading_rad = heading_deg * (math.pi / 180.0)
+                        alt_fl = max(10, int(alt_m * 3.28084 / 100))
+                        speed_kts = max(120, int(vel_ms * 1.94384))
+
+                        flights.append({
+                            "callsign": callsign,
+                            "xNorm": round(x_norm, 3),
+                            "yNorm": round(y_norm, 3),
+                            "heading": round(heading_rad, 3),
+                            "altitudeFL": alt_fl,
+                            "speedKnots": speed_kts,
+                            "squawk": squawk,
+                            "country": st[2] or "Commercial",
+                            "isStark": False,
+                        })
+
+                    return flights
+            except Exception:
+                return []
+
+        real_flights = await loop.run_in_executor(None, _fetch_opensky)
+        if real_flights:
+            self._cached_flights = real_flights
+        return self._cached_flights
 
     def get_weather_telemetry(self) -> dict[str, Any]:
         return self._cached_weather
+
+    def get_airspace_telemetry(self) -> list[dict[str, Any]]:
+        return self._cached_flights
 
     def get_telemetry_snapshot(self) -> dict[str, Any]:
         """Collect a full consolidated system telemetry snapshot."""
@@ -335,5 +468,6 @@ class SystemMonitor:
             "uptime": self.get_uptime_telemetry(),
             "os": self._os_info,
             "weather": self.get_weather_telemetry(),
+            "flights": self.get_airspace_telemetry(),
             "timestamp": time.time(),
         }

@@ -126,6 +126,40 @@ export class FlightTrackerHUD {
     this.audioLevel = Math.max(0, Math.min(1, level));
   }
 
+  public updateRealFlights(data: any[]): void {
+    if (!Array.isArray(data) || data.length === 0) return;
+
+    // Keep the Stark Industries VIP Quinjet flight
+    const starkFlight = this.flights.find((f) => f.isStark) || {
+      callsign: "STARK-01",
+      xNorm: -0.35,
+      yNorm: 0.15,
+      heading: 0.75,
+      speedKnots: 540,
+      altitudeFL: 410,
+      isStark: true,
+      trail: [],
+    };
+
+    const updated: TrackedFlight[] = [starkFlight];
+
+    for (const f of data.slice(0, 6)) {
+      const existing = this.flights.find((old) => old.callsign === f.callsign);
+      updated.push({
+        callsign: f.callsign || "AIR-01",
+        xNorm: f.xNorm !== undefined ? f.xNorm : (Math.random() * 1.6 - 0.8),
+        yNorm: f.yNorm !== undefined ? f.yNorm : (Math.random() * 1.6 - 0.8),
+        heading: f.heading !== undefined ? f.heading : Math.random() * Math.PI * 2,
+        speedKnots: f.speedKnots || 450,
+        altitudeFL: f.altitudeFL || 340,
+        isStark: false,
+        trail: existing ? existing.trail : [],
+      });
+    }
+
+    this.flights = updated;
+  }
+
   private startRenderLoop = (): void => {
     if (!this.isRunning) return;
 
