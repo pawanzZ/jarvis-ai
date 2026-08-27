@@ -290,11 +290,27 @@
   display: flex !important;
 }
 
-/* Scale the active core canvas to fit the 220x160 corner pod */
-.vision-mode-active #core-viewport canvas,
+/* Center and scale the active core visualizers inside the 220x160 corner pod */
+.vision-mode-active #core-viewport #fusion-core-canvas,
+.vision-mode-active #core-viewport #orb-canvas,
 .vision-mode-active #core-viewport #core-container {
-  transform: scale(0.35) !important;
+  position: absolute !important;
+  top: calc(50% + 12px) !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) scale(0.34) !important;
   transform-origin: center center !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 20 !important;
+}
+
+.vision-mode-active #core-viewport #fusion-core-canvas.inactive-variant,
+.vision-mode-active #core-viewport #orb-canvas.inactive-variant,
+.vision-mode-active #core-viewport #core-container.inactive-variant {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 /* Hide flanking wings and variant pills when minimized in top-right */

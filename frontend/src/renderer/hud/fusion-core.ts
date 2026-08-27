@@ -51,9 +51,8 @@ export class FusionCoreVisualizer {
 
   public resize(): void {
     const dpr = window.devicePixelRatio || 1;
-    const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width || 440;
-    const height = rect.height || 440;
+    const width = 440;
+    const height = 440;
 
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
@@ -88,7 +87,6 @@ export class FusionCoreVisualizer {
 
     // Smooth audio tracking
     this.currentLevel += (this.targetLevel - this.currentLevel) * 0.22;
-    this.targetLevel *= 0.93;
 
     // Speeds tuned by state
     let speedMult = 1.0;
@@ -108,13 +106,21 @@ export class FusionCoreVisualizer {
   };
 
   private render(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width || 440;
-    const height = rect.height || 440;
+    const dpr = window.devicePixelRatio || 1;
+    const width = 440;
+    const height = 440;
     const cx = width * 0.5;
     const cy = height * 0.5;
 
-    this.ctx.clearRect(0, 0, width, height);
+    if (this.canvas.width !== width * dpr || this.canvas.height !== height * dpr) {
+      this.canvas.width = width * dpr;
+      this.canvas.height = height * dpr;
+    }
+
+    this.ctx.save();
+    this.ctx.resetTransform?.();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.scale(dpr, dpr);
 
     // Color palettes by state
     let primaryColor = "0, 212, 255";   // Electric Cyan

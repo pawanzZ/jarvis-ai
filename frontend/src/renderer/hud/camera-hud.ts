@@ -46,10 +46,14 @@ export class CameraHUD {
     this.isVisionMode = enabled;
     this.boxW = enabled ? 180 : 80;
     this.boxH = enabled ? 220 : 95;
-    // Trigger progressive resize during and after CSS transition
+
+    // Immediately snap box coordinates to target center to prevent multi-frame diagonal ghost trails
+    const approxW = enabled ? 580 : 220;
+    const approxH = enabled ? 380 : 160;
+    this.boxX = approxW * 0.5 - this.boxW * 0.5;
+    this.boxY = approxH * 0.5 - this.boxH * 0.5;
+
     this.resize();
-    setTimeout(() => this.resize(), 100);
-    setTimeout(() => this.resize(), 400);
   }
 
   private handleResize = (): void => {
@@ -122,13 +126,25 @@ export class CameraHUD {
   };
 
   private render(): void {
+    const dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width || 220;
-    const height = rect.height || 160;
+    const width = Math.round(rect.width) || (this.isVisionMode ? 580 : 220);
+    const height = Math.round(rect.height) || (this.isVisionMode ? 380 : 160);
+
+    const targetW = width * dpr;
+    const targetH = height * dpr;
+    if (this.canvas.width !== targetW || this.canvas.height !== targetH) {
+      this.canvas.width = targetW;
+      this.canvas.height = targetH;
+    }
+
+    this.ctx.save();
+    this.ctx.resetTransform?.();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.scale(dpr, dpr);
+
     const cx = width * 0.5;
     const cy = height * 0.5;
-
-    this.ctx.clearRect(0, 0, width, height);
 
     // 1. Synthetic Fallback Background if real camera is not active
     if (this.isSynthetic) {
@@ -315,6 +331,8 @@ export class CameraHUD {
       this.ctx.fillText("FOV: 84° // NEURAL PARSING: 60 FPS", width - 14, height - 12);
       this.ctx.restore();
     }
+
+    this.ctx.restore();
   }
 
   public destroy(): void {
