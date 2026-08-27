@@ -34,6 +34,9 @@ import { SettingsPanel } from "../hud/panels/settings";
 import { SystemMonitorHUD } from "../hud/system-monitor";
 import { ParticleOrbVisualizer } from "../hud/particle-orb";
 import { FusionCoreVisualizer } from "../hud/fusion-core";
+import { CyberGauges } from "../hud/cyber-gauges";
+import { TacticalRadar } from "../hud/tactical-radar";
+import { SpinningGlobe } from "../hud/spinning-globe";
 import { SFXSynthesizer } from "../sfx/synthesizer";
 
 export class JarvisApp {
@@ -45,6 +48,9 @@ export class JarvisApp {
   private currentVariant: CoreVisualizerVariant = "arc_reactor";
   private waveform: Waveform;
   private particles: ParticleSystem;
+  private cyberGauges: CyberGauges | null = null;
+  private tacticalRadar: TacticalRadar | null = null;
+  private spinningGlobe: SpinningGlobe | null = null;
   private statusBar: StatusBar;
   private transcriptBar: TranscriptBar;
   private settingsPanel: SettingsPanel;
@@ -82,7 +88,17 @@ export class JarvisApp {
     if (!particleCanvas) throw new Error("Missing #particle-canvas");
     this.particles = new ParticleSystem(particleCanvas);
 
-    // 4. Initialize Status & Transcript bars
+    // 4. Initialize Cyber Futuristic Widgets (Gauges, Tactical Radar, 3D Globe)
+    const gaugesCanvas = document.getElementById("cyber-gauges-canvas") as HTMLCanvasElement;
+    if (gaugesCanvas) this.cyberGauges = new CyberGauges(gaugesCanvas);
+
+    const radarCanvas = document.getElementById("tactical-radar-canvas") as HTMLCanvasElement;
+    if (radarCanvas) this.tacticalRadar = new TacticalRadar(radarCanvas);
+
+    const globeCanvas = document.getElementById("spinning-globe-canvas") as HTMLCanvasElement;
+    if (globeCanvas) this.spinningGlobe = new SpinningGlobe(globeCanvas);
+
+    // 5. Initialize Status & Transcript bars
     const statusBarEl = document.getElementById("status-bar");
     if (!statusBarEl) throw new Error("Missing #status-bar");
     this.statusBar = new StatusBar(statusBarEl, {
@@ -170,6 +186,9 @@ export class JarvisApp {
       this.reactor.setAudioLevel(level);
       this.fusionCore?.setAudioLevel(level);
       this.orbVisualizer.setAudioLevel(level);
+      this.cyberGauges?.setAudioLevel(level);
+      this.tacticalRadar?.setAudioLevel(level);
+      this.spinningGlobe?.setAudioLevel(level);
     });
 
     // Face Tracking Telemetry
@@ -212,6 +231,9 @@ export class JarvisApp {
       const data = msg.data;
       if (data) {
         this.systemMonitor.update(data);
+        if (data.cpu && data.cpu.usage_percent !== undefined) {
+          this.cyberGauges?.updateTelemetry(data.cpu.usage_percent);
+        }
         if (data.weather) {
           this.statusBar.setWeather(data.weather);
         }
@@ -249,6 +271,9 @@ export class JarvisApp {
     this.orbVisualizer.setState(newState);
     this.waveform.setState(newState);
     this.particles.setState(newState);
+    this.cyberGauges?.setState(newState);
+    this.tacticalRadar?.setState(newState);
+    this.spinningGlobe?.setState(newState);
     this.statusBar.setState(newState);
     this.transcriptBar.setState(newState);
 

@@ -400,7 +400,7 @@ html, body {
 #main-area {
   flex: 1;
   display: grid;
-  grid-template-columns: 280px 1fr 280px;
+  grid-template-columns: 310px 1fr 310px;
   position: relative;
   overflow: hidden;
 }

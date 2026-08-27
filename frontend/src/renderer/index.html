@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="hud/arc-reactor.css">
   <link rel="stylesheet" href="hud/fusion-core.css">
   <link rel="stylesheet" href="hud/particle-orb.css">
+  <link rel="stylesheet" href="hud/cyber-widgets.css">
   <link rel="stylesheet" href="hud/panels/settings.css">
 </head>
 <body>
@@ -64,6 +65,23 @@
         <div class="panel-header">
           <span>HARDWARE TELEMETRY</span>
           <span style="font-size: 10px; color: var(--accent-green);">ONLINE</span>
+        </div>
+
+        <!-- Cyber Arc Gauges Section (Tony Stark Arc Power & Core Freq) -->
+        <div class="panel-section">
+          <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Quantum Power Flux</span>
+            <div class="header-oscilloscope">
+              <div class="osc-bar"></div>
+              <div class="osc-bar"></div>
+              <div class="osc-bar"></div>
+              <div class="osc-bar"></div>
+              <div class="osc-bar"></div>
+            </div>
+          </div>
+          <div class="cyber-widget-container">
+            <canvas id="cyber-gauges-canvas" width="280" height="110"></canvas>
+          </div>
         </div>
 
         <!-- Hardware Resources Section -->
@@ -259,8 +277,37 @@
       <!-- Right Panel: Vision & Telemetry Feed -->
       <aside class="hud-panel" id="right-panel">
         <div class="panel-header">
-          <span>VISION & TELEMETRY</span>
+          <span>TACTICAL & TELEMETRY</span>
           <span style="font-size: 10px; color: var(--accent-cyan);">ACTIVE</span>
+        </div>
+
+        <!-- Tactical Holographic Radar / Sonar Section -->
+        <div class="panel-section">
+          <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Tactical Radar / Sonar</span>
+            <span style="font-size: 9px; color: var(--accent-cyan);">ACTIVE 100KM</span>
+          </div>
+          <div class="cyber-widget-container">
+            <canvas id="tactical-radar-canvas" width="280" height="160"></canvas>
+          </div>
+        </div>
+
+        <!-- 3D Holographic Planetary Globe Section -->
+        <div class="panel-section">
+          <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Global Orbital Telemetry</span>
+            <span style="font-size: 9px; color: var(--accent-gold);">23.5° AXIS</span>
+          </div>
+          <div class="cyber-widget-container">
+            <canvas id="spinning-globe-canvas" width="280" height="150"></canvas>
+          </div>
+        </div>
+
+        <!-- Streaming Cryptographic Hex Ticker -->
+        <div class="hex-ticker-bar">
+          <div class="hex-ticker-content">
+            0x7F4A 0x82BC [NEURAL_LINK: OK] 0x194F 0xA823 [QUANTUM_FLUX: 98.4%] 0x00FF 0xCA91 [RADAR: 4 CONTACTS] 0x384D [SATELLITE_ORBIT: GEO-SYNC] 0x619B 0xE204 0x7F4A 0x82BC [NEURAL_LINK: OK] 0x194F 0xA823
+          </div>
         </div>
 
         <div class="panel-section">
@@ -401,6 +448,18 @@
   <script>window.__loadModule('fusion-core', function() {});</script>
   <script src="hud/fusion-core.js"></script>
   <script>window.__exportsMap['fusion-core'] = window.exports;</script>
+
+  <script>window.__loadModule('cyber-gauges', function() {});</script>
+  <script src="hud/cyber-gauges.js"></script>
+  <script>window.__exportsMap['cyber-gauges'] = window.exports;</script>
+
+  <script>window.__loadModule('tactical-radar', function() {});</script>
+  <script src="hud/tactical-radar.js"></script>
+  <script>window.__exportsMap['tactical-radar'] = window.exports;</script>
+
+  <script>window.__loadModule('spinning-globe', function() {});</script>
+  <script src="hud/spinning-globe.js"></script>
+  <script>window.__exportsMap['spinning-globe'] = window.exports;</script>
 
   <script>window.__loadModule('app', function() {});</script>
   <script src="core/app.js"></script>
