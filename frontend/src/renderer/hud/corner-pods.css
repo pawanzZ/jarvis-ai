@@ -24,8 +24,8 @@
 .hud-corner-pod.pod-top-left {
   top: 14px;
   left: 14px;
-  width: 220px;
-  height: 160px;
+  width: 240px;
+  height: 175px;
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
 }
 
@@ -85,6 +85,25 @@
   box-shadow: 0 0 6px var(--accent-green, #00f5d4);
 }
 
+.pod-toggle-btn {
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  color: var(--accent-cyan, #00d4ff);
+  font-family: var(--font-mono, monospace);
+  font-size: 7.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.8px;
+  transition: all 0.2s ease;
+}
+
+.pod-toggle-btn:hover {
+  background: rgba(0, 212, 255, 0.28);
+  border-color: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
 /* Pod Canvas Body */
 .corner-pod-body {
   flex: 1;
@@ -95,11 +114,21 @@
 }
 
 #ironman-mask-canvas,
+#ironman-3d-canvas,
 #camera-hud-canvas,
 #flight-tracker-canvas {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+#ironman-3d-canvas {
+  cursor: grab;
+  touch-action: none;
+}
+
+#ironman-3d-canvas:active {
+  cursor: grabbing;
 }
 
 /* Video Element Layer for Camera Pod */

@@ -221,14 +221,17 @@
         <div class="hud-reticle"></div>
 
         <!-- Center Viewport Corner Pods (Tony Stark Battle-Station) -->
-        <!-- Corner Pod 1: Iron Man Holographic Mask -->
+        <!-- Corner Pod 1: Interactive 3D Iron Man Hologram -->
         <div class="hud-corner-pod pod-top-left">
           <div class="corner-pod-header">
-            <span>HELMET HUD // MK-85</span>
-            <div class="pod-status-indicator"><span class="pod-dot"></span>OPTICS</div>
+            <span>ARMOR 3D // MK-85</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button class="pod-toggle-btn" id="btn-toggle-armor-view" title="Toggle Helmet / Full Armor Mode [M]">HELMET</button>
+              <div class="pod-status-indicator"><span class="pod-dot"></span>3D</div>
+            </div>
           </div>
           <div class="corner-pod-body">
-            <canvas id="ironman-mask-canvas" width="220" height="136"></canvas>
+            <canvas id="ironman-3d-canvas" width="240" height="151"></canvas>
           </div>
         </div>
 
@@ -508,9 +511,9 @@
   <script src="hud/spinning-globe.js"></script>
   <script>window.__exportsMap['spinning-globe'] = window.exports;</script>
 
-  <script>window.__loadModule('ironman-mask', function() {});</script>
-  <script src="hud/ironman-mask.js"></script>
-  <script>window.__exportsMap['ironman-mask'] = window.exports;</script>
+  <script>window.__loadModule('ironman-3d', function() {});</script>
+  <script src="hud/ironman-3d.js"></script>
+  <script>window.__exportsMap['ironman-3d'] = window.exports;</script>
 
   <script>window.__loadModule('camera-hud', function() {});</script>
   <script src="hud/camera-hud.js"></script>

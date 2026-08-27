@@ -37,7 +37,7 @@ import { FusionCoreVisualizer } from "../hud/fusion-core";
 import { CyberGauges } from "../hud/cyber-gauges";
 import { NeuralBrainHUD } from "../hud/neural-brain";
 import { SpinningGlobe } from "../hud/spinning-globe";
-import { IronManMaskHUD } from "../hud/ironman-mask";
+import { IronMan3DModelHUD } from "../hud/ironman-3d";
 import { CameraHUD } from "../hud/camera-hud";
 import { ScriptRunnerHUD } from "../hud/script-runner";
 import { FlightTrackerHUD } from "../hud/flight-tracker";
@@ -55,7 +55,7 @@ export class JarvisApp {
   private cyberGauges: CyberGauges | null = null;
   private neuralBrain: NeuralBrainHUD | null = null;
   private spinningGlobe: SpinningGlobe | null = null;
-  private ironmanMask: IronManMaskHUD | null = null;
+  private ironman3D: IronMan3DModelHUD | null = null;
   private cameraHud: CameraHUD | null = null;
   private scriptRunner: ScriptRunnerHUD | null = null;
   private flightTracker: FlightTrackerHUD | null = null;
@@ -107,8 +107,18 @@ export class JarvisApp {
     if (globeCanvas) this.spinningGlobe = new SpinningGlobe(globeCanvas);
 
     // 5. Initialize Center Corner Pods (Tony Stark Battle-Station)
-    const maskCanvas = document.getElementById("ironman-mask-canvas") as HTMLCanvasElement;
-    if (maskCanvas) this.ironmanMask = new IronManMaskHUD(maskCanvas);
+    const ironmanCanvas = document.getElementById("ironman-3d-canvas") as HTMLCanvasElement;
+    if (ironmanCanvas) {
+      this.ironman3D = new IronMan3DModelHUD(ironmanCanvas);
+    }
+
+    const toggleArmorBtn = document.getElementById("btn-toggle-armor-view");
+    if (toggleArmorBtn && this.ironman3D) {
+      toggleArmorBtn.addEventListener("click", () => {
+        const newMode = this.ironman3D?.toggleViewMode();
+        toggleArmorBtn.textContent = newMode === "helmet" ? "HELMET" : "ARMOR";
+      });
+    }
 
     const cameraVideo = document.getElementById("hud-camera-video") as HTMLVideoElement;
     const cameraCanvas = document.getElementById("camera-hud-canvas") as HTMLCanvasElement;
@@ -219,7 +229,7 @@ export class JarvisApp {
       this.cyberGauges?.setAudioLevel(level);
       this.neuralBrain?.setAudioLevel(level);
       this.spinningGlobe?.setAudioLevel(level);
-      this.ironmanMask?.setAudioLevel(level);
+      this.ironman3D?.setAudioLevel(level);
       this.cameraHud?.setAudioLevel(level);
       this.flightTracker?.setAudioLevel(level);
     });
@@ -310,7 +320,7 @@ export class JarvisApp {
     this.cyberGauges?.setState(newState);
     this.neuralBrain?.setState(newState);
     this.spinningGlobe?.setState(newState);
-    this.ironmanMask?.setState(newState);
+    this.ironman3D?.setState(newState);
     this.cameraHud?.setState(newState);
     this.scriptRunner?.setState(newState);
     this.flightTracker?.setState(newState);
@@ -454,6 +464,15 @@ export class JarvisApp {
         const nextVariant: CoreVisualizerVariant =
           this.currentVariant === "arc_reactor" ? "particle_orb" : "arc_reactor";
         this.setCoreVariant(nextVariant);
+      }
+
+      // KeyM: Toggle Iron Man 3D Model Mode (Helmet <-> Suit Blueprint)
+      if (e.code === "KeyM" && (e.target === document.body || (e.target as HTMLElement).tagName === "BUTTON")) {
+        e.preventDefault();
+        const newMode = this.ironman3D?.toggleViewMode();
+        const btn = document.getElementById("btn-toggle-armor-view");
+        if (btn && newMode) btn.textContent = newMode === "helmet" ? "HELMET" : "ARMOR";
+        this.sfx.chime();
       }
 
       // Escape: Close Settings or toggle Fullscreen
