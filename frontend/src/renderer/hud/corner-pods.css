@@ -201,3 +201,104 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Smooth transitions for swapped pods */
+.hud-corner-pod.pod-top-right,
+#core-viewport {
+  transition: width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              top 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              left 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              right 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.38s ease,
+              border-color 0.38s ease,
+              clip-path 0.38s ease;
+}
+
+/* ==========================================================================
+   VISION MODE: Swap Center Jarvis with Vision Detection Feed
+   ========================================================================== */
+
+/* 1. Camera / Optical Feed expands to Center Stage */
+.vision-mode-active .hud-corner-pod.pod-top-right {
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translate(-50%, -50%) !important;
+  width: 580px !important;
+  height: 380px !important;
+  z-index: 22 !important;
+  border: 1.5px solid rgba(0, 245, 212, 0.6) !important;
+  box-shadow: 0 0 45px rgba(0, 212, 255, 0.3), inset 0 0 24px rgba(0, 245, 212, 0.1) !important;
+  clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px), 0 18px) !important;
+}
+
+.vision-mode-active .hud-corner-pod.pod-top-right .corner-pod-header {
+  background: rgba(0, 245, 212, 0.16) !important;
+  border-bottom-color: rgba(0, 245, 212, 0.45) !important;
+  color: var(--accent-green, #00f5d4) !important;
+}
+
+.vision-mode-active .hud-corner-pod.pod-top-right .pod-toggle-btn.vision-active {
+  background: rgba(0, 245, 212, 0.25) !important;
+  border-color: var(--accent-green, #00f5d4) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(0, 245, 212, 0.5) !important;
+}
+
+/* 2. Central Jarvis Core Agent minimizes into Top-Right Corner Pod */
+.vision-mode-active #core-viewport {
+  position: absolute !important;
+  top: 14px !important;
+  right: 14px !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 220px !important;
+  height: 160px !important;
+  z-index: 25 !important;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.06) 0%, rgba(6, 16, 36, 0.88) 100%) !important;
+  border: 1px solid rgba(0, 180, 255, 0.35) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(0, 180, 255, 0.08) !important;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px)) !important;
+  overflow: hidden !important;
+}
+
+/* Minimized Core Header */
+#core-viewport .minimized-core-header {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 180, 255, 0.25);
+  background: rgba(0, 180, 255, 0.08);
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  color: var(--accent-cyan, #00d4ff);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  z-index: 30;
+}
+
+.vision-mode-active #core-viewport .minimized-core-header {
+  display: flex !important;
+}
+
+/* Scale the active core canvas to fit the 220x160 corner pod */
+.vision-mode-active #core-viewport canvas,
+.vision-mode-active #core-viewport #core-container {
+  transform: scale(0.35) !important;
+  transform-origin: center center !important;
+}
+
+/* Hide flanking wings and variant pills when minimized in top-right */
+.vision-mode-active #core-viewport .hud-core-wings,
+.vision-mode-active #core-viewport .core-variant-switch {
+  display: none !important;
+}

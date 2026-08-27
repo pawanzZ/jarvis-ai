@@ -175,6 +175,13 @@
             </svg>
             <span>PUSH TO TALK (SPACE)</span>
           </button>
+          <button class="hud-action-btn" id="btn-quick-vision">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span id="btn-quick-vision-label">VISION MODE (O)</span>
+          </button>
           <button class="hud-action-btn" id="btn-quick-clear">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
@@ -223,11 +230,14 @@
           </div>
         </div>
 
-        <!-- Corner Pod 2: Real-Time Optical / Video Feed -->
-        <div class="hud-corner-pod pod-top-right">
+        <!-- Corner Pod 2: Real-Time Optical / Video Feed (Expands to Center in Vision Mode) -->
+        <div class="hud-corner-pod pod-top-right" id="pod-top-right">
           <div class="corner-pod-header">
-            <span>OPTICAL SENSOR 01</span>
-            <div class="pod-status-indicator" style="color: var(--accent-cyan);"><span class="pod-dot"></span>LIVE</div>
+            <span id="pod-top-right-title">OPTICAL SENSOR 01</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button class="pod-toggle-btn" id="btn-toggle-vision-mode" title="Toggle Vision Mode [O]">VISION MODE</button>
+              <div class="pod-status-indicator" style="color: var(--accent-cyan);"><span class="pod-dot"></span><span id="pod-top-right-status">LIVE</span></div>
+            </div>
           </div>
           <div class="corner-pod-body">
             <video id="hud-camera-video" autoplay playsinline muted></video>
@@ -258,6 +268,10 @@
         </div>
 
         <div id="core-viewport">
+          <div class="minimized-core-header">
+            <span>JARVIS CORE // MINIMIZED</span>
+            <div class="pod-status-indicator"><span class="pod-dot"></span>ACTIVE</div>
+          </div>
           <!-- Celestial Fusion Plasma Core Canvas (Reference 2) -->
           <canvas id="fusion-core-canvas" width="440" height="440"></canvas>
           <div id="core-container" class="inactive-variant"></div>

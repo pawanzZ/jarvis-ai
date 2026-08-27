@@ -64,6 +64,7 @@ export class JarvisApp {
   private settingsPanel: SettingsPanel;
   private systemMonitor: SystemMonitorHUD;
   private state: JarvisState = "idle";
+  private isVisionMode = false;
   private activePlugins: Set<string> = new Set();
 
   constructor() {
@@ -394,6 +395,59 @@ export class JarvisApp {
     }
   }
 
+  /**
+   * Toggles between standard Core Agent Mode and Vision Mode (Center Stage camera targeting feed).
+   */
+  public toggleVisionMode(): boolean {
+    this.setVisionMode(!this.isVisionMode);
+    return this.isVisionMode;
+  }
+
+  public setVisionMode(enabled: boolean): void {
+    this.isVisionMode = enabled;
+
+    const centerArea = document.getElementById("center-area");
+    centerArea?.classList.toggle("vision-mode-active", enabled);
+
+    const toggleBtn = document.getElementById("btn-toggle-vision-mode");
+    if (toggleBtn) {
+      toggleBtn.textContent = enabled ? "CORE MODE" : "VISION MODE";
+      toggleBtn.classList.toggle("vision-active", enabled);
+    }
+
+    const titleEl = document.getElementById("pod-top-right-title");
+    if (titleEl) {
+      titleEl.textContent = enabled ? "OPTICAL SENSOR // TARGETING" : "OPTICAL SENSOR 01";
+    }
+
+    const statusEl = document.getElementById("pod-top-right-status");
+    if (statusEl) {
+      statusEl.textContent = enabled ? "LOCK" : "LIVE";
+    }
+
+    const quickLabel = document.getElementById("btn-quick-vision-label");
+    if (quickLabel) {
+      quickLabel.textContent = enabled ? "CORE MODE (O)" : "VISION MODE (O)";
+    }
+
+    // Notify camera HUD to expand/collapse targeting reticles & mesh
+    this.cameraHud?.setVisionMode(enabled);
+
+    // Audio acoustic feedback
+    this.sfx.chime();
+
+    // Broadcast over WebSocket to backend
+    this.ws.send({ type: "vision_mode", enabled });
+
+    // Show tactical feedback in transcript bar
+    this.transcriptBar.setFinalTranscript(
+      enabled
+        ? "Optical neural visual input engaged. Consuming real-time spatial and facial telemetry."
+        : "Optical neural visual input disengaged. Returning to central reactor core.",
+      "jarvis"
+    );
+  }
+
   private handleFaceTelemetry(msg: FaceDataEvent): void {
     const detected = msg.face_detected !== undefined
       ? msg.face_detected
@@ -491,6 +545,12 @@ export class JarvisApp {
         this.sfx.chime();
       }
 
+      // KeyO: Toggle Vision Mode (Center Stage Camera Targeting <-> Minimized Core)
+      if (e.code === "KeyO" && (e.target === document.body || (e.target as HTMLElement).tagName === "BUTTON")) {
+        e.preventDefault();
+        this.toggleVisionMode();
+      }
+
       // Escape: Close Settings or toggle Fullscreen
       if (e.code === "Escape") {
         this.settingsPanel.close();
@@ -507,6 +567,12 @@ export class JarvisApp {
   private setupQuickControls(): void {
     const pttBtn = document.getElementById("btn-quick-ptt");
     pttBtn?.addEventListener("click", () => this.toggleActivation());
+
+    const quickVisionBtn = document.getElementById("btn-quick-vision");
+    quickVisionBtn?.addEventListener("click", () => this.toggleVisionMode());
+
+    const toggleVisionBtn = document.getElementById("btn-toggle-vision-mode");
+    toggleVisionBtn?.addEventListener("click", () => this.toggleVisionMode());
 
     const clearBtn = document.getElementById("btn-quick-clear");
     clearBtn?.addEventListener("click", () => {

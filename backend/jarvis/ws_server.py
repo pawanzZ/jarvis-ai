@@ -266,6 +266,14 @@ class WSServer:
                         pass
                 else:
                     await self.broadcast(resp)
+        elif msg_type == "vision_mode":
+            enabled = bool(msg.get("enabled", msg.get("data", {}).get("enabled", False)))
+            await self.bus.emit(Event(type="vision_mode_change", data={"enabled": enabled}, source="hud"))
+            await self.broadcast({
+                "type": "vision_mode_state",
+                "data": {"enabled": enabled},
+                "enabled": enabled,
+            })
 
     async def broadcast(self, data: dict[str, Any]) -> None:
         message = json.dumps(data)

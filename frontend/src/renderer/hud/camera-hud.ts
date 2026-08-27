@@ -19,6 +19,7 @@ export class CameraHUD {
   private state: JarvisState = "idle";
   private mediaStream: MediaStream | null = null;
   private isSynthetic = false;
+  private isVisionMode = false;
   private time = 0;
   private audioLevel = 0;
 
@@ -39,6 +40,16 @@ export class CameraHUD {
     window.addEventListener("resize", this.handleResize);
     this.initCamera();
     this.start();
+  }
+
+  public setVisionMode(enabled: boolean): void {
+    this.isVisionMode = enabled;
+    this.boxW = enabled ? 180 : 80;
+    this.boxH = enabled ? 220 : 95;
+    // Trigger progressive resize during and after CSS transition
+    this.resize();
+    setTimeout(() => this.resize(), 100);
+    setTimeout(() => this.resize(), 400);
   }
 
   private handleResize = (): void => {
@@ -249,6 +260,61 @@ export class CameraHUD {
     this.ctx.fillText("OPTICAL-01 // 30 FPS", width - 10, 16);
     this.ctx.fillText("F/1.8  ISO 400", width - 10, height - 10);
     this.ctx.restore();
+
+    // 5. Vision Mode Expanded HUD Overlays
+    if (this.isVisionMode) {
+      this.ctx.save();
+
+      // Draw Facial Mesh Triangulation Wireframe Points
+      const pts = [
+        [0.2, 0.25], [0.5, 0.18], [0.8, 0.25], // Brow
+        [0.32, 0.38], [0.68, 0.38],            // Eyes
+        [0.5, 0.52], [0.44, 0.62], [0.56, 0.62], // Nose
+        [0.36, 0.76], [0.5, 0.74], [0.64, 0.76], // Upper lip
+        [0.5, 0.84],                            // Chin
+        [0.15, 0.5], [0.85, 0.5]                // Cheeks
+      ];
+      this.ctx.fillStyle = "rgba(0, 245, 212, 0.85)";
+      this.ctx.strokeStyle = "rgba(0, 212, 255, 0.3)";
+      this.ctx.lineWidth = 0.8;
+
+      pts.forEach(([px, py]) => {
+        const lx = bx + bw * px;
+        const ly = by + bh * py;
+        this.ctx.beginPath();
+        this.ctx.arc(lx, ly, 2.2, 0, Math.PI * 2);
+        this.ctx.fill();
+      });
+
+      // Connect jawline & nose bridge
+      this.ctx.beginPath();
+      this.ctx.moveTo(bx + bw * 0.15, by + bh * 0.5);
+      this.ctx.lineTo(bx + bw * 0.5, by + bh * 0.84);
+      this.ctx.lineTo(bx + bw * 0.85, by + bh * 0.5);
+      this.ctx.stroke();
+
+      // Top Center Banner
+      this.ctx.font = "bold 9px 'Fira Code', 'Roboto Mono', monospace";
+      this.ctx.textAlign = "center";
+      this.ctx.fillStyle = "#00f5d4";
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowColor = "#00f5d4";
+      this.ctx.fillText("● VISION MODE // CONSUMING VISUAL INPUT", width * 0.5, 18);
+      this.ctx.shadowBlur = 0;
+
+      // Head Pose Orientation & Gaze Vectors
+      this.ctx.textAlign = "left";
+      this.ctx.font = "bold 8px 'Fira Code', 'Roboto Mono', monospace";
+      this.ctx.fillStyle = "rgba(0, 212, 255, 0.9)";
+      this.ctx.fillText("HEAD POSE: P: -1.2°  Y: 0.8°  R: 0.0°", 14, height - 24);
+      this.ctx.fillText("GAZE VECTOR: [0.50, 0.48] // RETINAL LOCK", 14, height - 12);
+
+      this.ctx.textAlign = "right";
+      this.ctx.fillStyle = "rgba(255, 215, 0, 0.9)";
+      this.ctx.fillText("BIOMETRICS: OPTIMAL // 99.8%", width - 14, height - 24);
+      this.ctx.fillText("FOV: 84° // NEURAL PARSING: 60 FPS", width - 14, height - 12);
+      this.ctx.restore();
+    }
   }
 
   public destroy(): void {

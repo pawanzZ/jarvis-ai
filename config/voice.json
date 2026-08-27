@@ -2,7 +2,7 @@
   "stt_plugin": "whisper_local",
   "tts_plugin": "piper_tts",
   "sttPlugin": "whisper_local",
-  "ttsPlugin": "edge_tts",
+  "ttsPlugin": "piper_tts",
   "ttsVoice": "en_GB-alan-medium",
   "ttsRate": 1,
   "micSensitivity": 0.8,
